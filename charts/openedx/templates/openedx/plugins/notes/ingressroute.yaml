@@ -1,0 +1,39 @@
+{{- if and .Values.openedx.traefik.enabled .Values.openedx.enabled .Values.openedx.notes.enabled -}}
+{{- $host := .Values.openedx.notes.host }}
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: notes-ingressroute
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+{{- range .Values.openedx.notes.localRoutes }}
+    - match: Host(`{{ .host | default $host }}`) && PathPrefix(`{{ .path }}`)
+      kind: Rule
+      middlewares:
+        - name: apps-body-limit
+        - name: add-headers
+        - name: compress-gzip
+{{- if .suppressPath }}
+        - name: stripprefix-notes-{{ .name }}
+{{- end }}
+      services:
+        - name: external-notes-{{ .name }}
+          port: {{ .port }}
+{{- end }}
+    - match: Host(`{{ $host }}`)
+      kind: Rule
+      middlewares:
+      - name: add-headers
+      - name: compress-gzip
+      services:
+      - name: notes
+        port: {{ .Values.openedx.notes.service.port | default 8000 }}
+  tls:
+    {{- include "openedx.ingressroute.tlsname" (dict "component" "notes" "root" .) | nindent 4 }}
+---
+{{- include "openedx.ingressroute.tlscertificate" (dict "component" "notes" "root" .) }}
+{{- end -}}

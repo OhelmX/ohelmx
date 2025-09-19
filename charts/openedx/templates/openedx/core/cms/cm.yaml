@@ -1,0 +1,82 @@
+{{- if and .Values.openedx.enabled .Values.openedx.cms.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openedx-settings-cms
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+  labels:
+    {{- include "openedx.componentLabels" (dict "component" "cms" "root" .) | nindent 4 }}
+data:
+  __init__.py: ""
+
+  production.py: |-
+    # -*- coding: utf-8 -*-
+    import os
+    from cms.envs.production import *
+
+    {{- include "openedx.common.shared" . | nindent 4 }}
+
+    ######## Common CMS settings
+    STUDIO_NAME = f"{os.environ['PLATFORM_NAME']} - Studio"
+
+    CACHES["staticfiles"] = {
+        "KEY_PREFIX": "staticfiles_cms",
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "staticfiles_cms",
+    }
+
+    # Authentication
+    SOCIAL_AUTH_EDX_OAUTH2_SECRET = os.environ["SOCIAL_AUTH_EDX_OAUTH2_SECRET"]
+    SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT = os.environ["SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT"]
+    SOCIAL_AUTH_REDIRECT_IS_HTTPS = False  # scheme is correctly included in redirect_uri
+    SESSION_COOKIE_NAME = "studio_session_id"
+
+    MAX_ASSET_UPLOAD_FILE_SIZE_IN_MB = 100
+
+    FRONTEND_LOGIN_URL = LMS_ROOT_URL + '/login'
+    FRONTEND_REGISTER_URL = LMS_ROOT_URL + '/register'
+
+    # Enable "reindex" button
+    FEATURES["ENABLE_COURSEWARE_INDEX"] = True
+
+    # Create folders if necessary
+    for folder in [LOG_DIR, MEDIA_ROOT, STATIC_ROOT, ORA2_FILEUPLOAD_ROOT]:
+        if not os.path.exists(folder):
+            os.makedirs(folder, exist_ok=True)
+
+    # FIXME: deleted MAIN
+    # COURSE_IMPORT_EXPORT_STORAGE = DEFAULT_FILE_STORAGE
+    # COURSE_METADATA_EXPORT_STORAGE = DEFAULT_FILE_STORAGE
+    # USER_TASKS_ARTIFACT_STORAGE = DEFAULT_FILE_STORAGE
+    # FIXME: added MAIN
+    COURSE_IMPORT_EXPORT_STORAGE = STORAGES['default']['BACKEND']
+    COURSE_METADATA_EXPORT_STORAGE = STORAGES['default']['BACKEND']
+    USER_TASKS_ARTIFACT_STORAGE = STORAGES['default']['BACKEND']
+
+    ######## End of common CMS settings
+
+    ALLOWED_HOSTS = [
+        ENV_TOKENS.get("CMS_BASE"),
+        "cms",
+    ]
+    CORS_ORIGIN_WHITELIST.append(f"https://{CMS_HOST}")
+
+    # Authentication
+    SOCIAL_AUTH_EDX_OAUTH2_KEY = "cms-sso"
+    SOCIAL_AUTH_EDX_OAUTH2_PUBLIC_URL_ROOT = f"https://{LMS_HOST}"
+
+    # MFE-specific settings
+
+    COURSE_AUTHORING_MICROFRONTEND_URL = f"https://{MFE_HOST}/authoring"
+
+    LOGIN_REDIRECT_WHITELIST.append(MFE_HOST)
+    CORS_ORIGIN_WHITELIST.append(f"https://{MFE_HOST}")
+    CSRF_TRUSTED_ORIGINS.append(f"https://{MFE_HOST}")
+
+    {{- if .Values.openedx.cms.extraDjangoSettings }}
+    {{ .Values.openedx.cms.extraDjangoSettings | indent 4 }}
+    {{- end }}
+
+
+{{- end -}}

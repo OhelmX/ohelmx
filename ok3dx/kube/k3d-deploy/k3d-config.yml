@@ -1,0 +1,72 @@
+# k3d configuration file
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: ok3dx
+servers: 1
+kubeAPI:
+  host: "localhost"
+  hostIP: "127.0.0.1"
+  hostPort: "6447"
+
+registries: # define how registries should be created or used
+  create: # creates a default registry to be used with the cluster; same as `--registry-create registry.localhost`
+    name: registry.ok3dx.local.openedx.io
+    host: "0.0.0.0"
+    hostPort: "5001"
+
+ports:
+  - port: 80:80
+    nodeFilters:
+      - loadbalancer
+  - port: 443:443
+    nodeFilters:
+      - loadbalancer
+
+  # postgresql
+  - port: 30432:30432
+    nodeFilters:
+      - loadbalancer
+  # mongodb/ferretdb
+  - port: 30433:30433
+    nodeFilters:
+      - loadbalancer
+  # redis
+  - port: 30434:30434
+    nodeFilters:
+      - loadbalancer
+  # minio
+  - port: 30435:30435
+    nodeFilters:
+      - loadbalancer
+  # meilisearch
+  - port: 30436:30436
+    nodeFilters:
+      - loadbalancer
+  # mysql
+  - port: 30437:30437
+    nodeFilters:
+      - loadbalancer
+
+env:
+  - envVar: name=ok3dx
+    nodeFilters:
+      - all
+
+options:
+  k3d:
+    wait: true
+    timeout: "60s"
+    disableLoadbalancer: false
+    disableImageVolume: false
+    disableRollback: false
+
+  k3s:
+    extraArgs:
+      - arg: "--tls-san=127.0.0.1"
+        nodeFilters:
+          - server:*
+
+  kubeconfig:
+    updateDefaultKubeconfig: false
+    switchCurrentContext: false

@@ -1,0 +1,298 @@
+
+global:
+  namespace: openedx
+  openedxVersion: "20.0.1-main"
+  instanceId: "openedx-instance"
+  imagePullSecrets: []
+
+project:
+  local:
+    enableNodePorts: false
+    rootPath: /openedx
+
+# Common labels and annotations
+commonLabels:
+  app.kubernetes.io/part-of: openedx
+  # app.kubernetes.io/managed-by: Helm
+  # Additional common labels can be added here
+
+commonAnnotations: {}
+  # App version annotation will be automatically added
+  # Additional annotations can be added here
+
+openedx:
+  enabled: true
+  isDev: false
+  local:
+    # if set and `isDev: true`, will mount a volume from this path (useful for local development)
+    # WARNING: this path will be inside the k3d container if using k3d, not your host machine,
+    # so if you want to use your host machine path, you need to mount it in k3d first at cluster creation time!
+    # This will be done automatically if using the ok3dx scripts
+    srcFrom: ""
+
+  traefik:
+    enabled: true
+
+  platformName: "My Open edX"
+  platformDescription: "An Open edX instance deployed with Helm"
+  # TODO: unused
+  platformSupportEmail: "support@local.openedx.io"
+  contactEmail: "contact@local.openedx.io"
+  languageCode: "en"
+  jwtCommonAudience: "openedx"
+
+  cache:
+    backend:
+      engine: django_redis.cache.RedisCache
+      host: redis
+      port: 6379
+      db: 1
+      credentials: "kv-db-credentials"
+
+  celeryBroker:
+    host: redis
+    vhost: "0"
+    port: 6379
+    credentials: "kv-db-credentials"
+    transport: "redis"
+  certManager:
+    enabled: true
+    issuers:
+      - server: https://acme-staging-v02.api.letsencrypt.org/directory
+        name: "letsencrypt-staging"
+        kind: "Issuer"
+        email: "certs@local.openedx.io"
+        privateKeySecretRef: "le-key-staging"
+      - server: https://acme-v02.api.letsencrypt.org/directory
+        name: "letsencrypt-prod"
+        kind: "Issuer"
+        email: "certs@local.openedx.io"
+        privateKeySecretRef: "le-key-prod"
+  s3:
+    gradeBucket: "openedxgrades"
+    profileImageBucket: "openedxprofiles"
+    storageBucket: "openedx"
+    fileUploadBucket: "openedxuploads"
+    queryStringAuth: true
+    signatureVersion: "s3v4"
+    requestChecksumCalculation: "when_required"
+    host: minio
+    port: 80
+    useSSL: false
+    defaultACL: ""
+    addressingStyle: "auto"
+    region: ""
+
+  documentdb:
+    host: mongodb
+    port: 27017
+    name: ferretdb
+    credentials: "documentdb-db-credentials"
+    authSource: ferretdb
+    authMechanism: "SCRAM-SHA-256"
+    replicaSet: ""
+    useSSL: false
+    options: {}
+
+  db:
+    engine: postgresql
+    host: db-cluster-rw
+    port: 5432
+    name: openedx
+    credentials: "openedx-db-credentials"
+    options: {}
+
+  init:
+    enabled: true
+    workflow:
+      timeout: 3600  # 1 hour in seconds
+  cms:
+    enabled: true
+    replicas: 1
+    uwsgiWorkers: 2
+    siteId: 2
+    application:
+      name: cms
+      port: 8000
+    service:
+      name: cms
+      port: 8000
+    ingress:
+      maxRequestBodyBytes: 262144000  # 2MB
+      memRequestBodyBytes: 262144000
+      maxResponseBodyBytes: 0
+
+    localRoutes: []
+    # - name: mypath
+    #   path: /mypath
+    #   suppressPath: true
+    #   port: 8000
+    diagnosticMode:
+      enabled: false
+      # command: [sleep]
+      # args: [infinity]
+
+    host: studio.local.openedx.io
+    existingTlsSecretName: ""  # if set, will use this TLS secret directly
+    # should match one of the cert-manager issuers above if using builtin cert-manager
+    tlsIssuerName: "letsencrypt-staging"
+    tlsIssuerKind: "Issuer"
+
+    bookUrl: ""
+    contactEmail: "contact@local.openedx.io"
+    image:
+      repository: ghcr.io/ohelmx/openedx
+      tag: "20.0.1-main-indigo-ok3dx.2"
+      pullPolicy: IfNotPresent
+      pullSecrets: []
+        # - name: my-registry-secret
+  cmsWorker:
+    name: cms-worker
+
+  lms:
+    enabled: true
+    replicas: 1
+    uwsgiWorkers: 2
+    siteId: 2
+
+    application:
+      name: lms
+      port: 8000
+    service:
+      name: lms
+      port: 8000
+    ingress:
+      profileUpload:
+        maxRequestBodyBytes: 1048576  # 1MB
+        memRequestBodyBytes: 1048576
+        maxResponseBodyBytes: 0
+      default:
+        maxRequestBodyBytes: 4194304  # 4MB
+        memRequestBodyBytes: 4194304
+        maxResponseBodyBytes: 0
+
+    localRoutes: []
+    diagnosticMode:
+      enabled: false
+
+    host: local.openedx.io
+    existingTlsSecretName: ""  # if set, will use this TLS secret directly
+    # should match one of the cert-manager issuers above if using builtin cert-manager
+    tlsIssuerName: "letsencrypt-staging"
+    tlsIssuerKind: "Issuer"
+
+    bookUrl: ""
+    contactEmail: "contact@local.openedx.io"
+    image:
+      repository: ghcr.io/ohelmx/openedx
+      tag: "20.0.1-main-indigo-ok3dx.2"
+      pullPolicy: IfNotPresent
+      pullSecrets: []
+  preview:
+    host: preview.local.openedx.io
+    existingTlsSecretName: ""  # if set, will use this TLS secret directly
+    # should match one of the cert-manager issuers above if using builtin cert-manager
+    tlsIssuerName: "letsencrypt-staging"
+    tlsIssuerKind: "Issuer"
+
+  lmsWorker:
+    name: lms-worker
+
+  mfe:
+    enabled: true
+    replicas: 1
+    application:
+      port: 8002
+    service:
+      port: 8002
+    ingress:
+      maxRequestBodyBytes: 2097152  # 2MB
+      memRequestBodyBytes: 2097152
+      maxResponseBodyBytes: 0
+
+    localRoutes: []
+    diagnosticMode:
+      enabled: false
+
+    host: apps.local.openedx.io
+    existingTlsSecretName: ""  # if set, will use this TLS secret directly
+    # should match one of the cert-manager issuers above if using builtin cert-manager
+    tlsIssuerName: "letsencrypt-staging"
+    tlsIssuerKind: "Issuer"
+
+    image:
+      repository: overhangio/openedx-mfe
+      tag: "20.0.0-indigo"
+      pullPolicy: IfNotPresent
+      pullSecrets: []
+  # plugins
+  notes:
+    enabled: true
+    replicas: 1
+    workers: 2
+    clientId: "notes"
+    # command: []
+    # args: []
+    diagnosticMode:
+      enabled: false
+
+    host: notes.local.openedx.io
+    existingTlsSecretName: ""  # if set, will use this TLS secret directly
+    # should match one of the cert-manager issuers above if using builtin cert-manager
+    tlsIssuerName: "letsencrypt-staging"
+    tlsIssuerKind: "Issuer"
+
+    application:
+      name: notes
+      port: 8000
+      maxRequests: 1000
+    service:
+      name: notes
+      port: 8000
+    localRoutes: []
+
+    image:
+      repository: ghcr.io/ohelmx/openedx-notes
+      tag: "20.0.1-ok3dx"
+      pullPolicy: IfNotPresent
+      pullSecrets: []
+    meilisearch:
+      enabled: true
+      url: "http://openedx-infra-meilisearch:7700"
+      searchIndex: "tutor_student_notes"
+      auth:
+        # The secret must contain the key: MEILI_MASTER_KEY
+        existingMasterKeySecret: "meili-master"
+        # The secret must contain the key: apiKeyUid
+        apiKeyUidSecret: "meili-master"
+        # The secret must contain the key: apiKey
+        apiKeySecret: "meili-master"
+
+    db:
+      cluster:
+        name: db-cluster
+      engine: postgresql
+      host: db-cluster-rw
+      port: 5432
+      name: notes
+      owner: notes
+      credentials: "notes-db-credentials"
+      options: {}
+
+  meilisearch:
+    # see https://github.com/meilisearch/meilisearch-kubernetes/tree/main/charts/meilisearch for more options
+    enabled: true
+    indexPrefix: "tutor_"
+    publicUrl: "https://meilisearch.local.openedx.io"
+    service:
+      port: 7700
+      host: openedx-infra-meilisearch
+      scheme: "http"
+
+    auth:
+      # The secret must contain the key: MEILI_MASTER_KEY
+      existingMasterKeySecret: "meili-master"
+      # The secret must contain the key: apiKeyUid
+      apiKeyUidSecret: "meili-master"
+      # The secret must contain the key: apiKey
+      apiKeySecret: "meili-master"

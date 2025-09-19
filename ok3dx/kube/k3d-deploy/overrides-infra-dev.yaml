@@ -1,0 +1,15 @@
+global:
+  isDev: false
+
+project:
+  local:
+    enabled: false
+    enableNodePorts: false
+
+minio:
+  tenant:
+    pools:
+      - servers: 1
+        name: pool-0
+        volumesPerServer: 1
+        size: 5Gi

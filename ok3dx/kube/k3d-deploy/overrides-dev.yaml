@@ -1,0 +1,48 @@
+# Override values for development
+# Coordinate changes here with changes to ./infra.yaml that get applied to the openedx-infra chart for k3d/dev
+
+openedx:
+  isDev: false
+  local:
+    # if set and `isDev: true`, will mount a volume from this path (useful for local development)
+    # WARNING: this path will be inside the k3d container if using k3d, not your host machine,
+    # so if you want to use your host machine path, you need to mount it in k3d first at cluster creation time!
+    # This will be done automatically if using the ok3dx scripts
+    srcFrom: "/openedx/edx-platform"
+
+  cms:
+    existingTlsSecretName: openedx-studio-local-openedx-io-cert
+    diagnosticMode:
+      enabled: false
+      # command: [sleep]
+      # args: [infinity]
+    # Check out ../../workspaces/build/build.sh for how this image is built and pushed to the local registry
+    # image:
+    #   repository: registry.ok3dx.local.openedx.io:5001/openedx
+    #   tag: 20.0.1-main-indigo-ok3dx.2
+  lms:
+    existingTlsSecretName: openedx-local-openedx-io-cert
+    diagnosticMode:
+      enabled: false
+    # Check out ../../workspaces/build/build.sh for how this image is built and pushed to the local registry
+    # image:
+    #   repository: registry.ok3dx.local.openedx.io:5001/openedx
+    #   tag: 20.0.1-main-indigo-ok3dx.2
+  preview:
+    existingTlsSecretName: openedx-preview-local-openedx-io-cert
+  mfe:
+    existingTlsSecretName: openedx-apps-local-openedx-io-cert
+
+  notes:
+    existingTlsSecretName: openedx-notes-local-openedx-io-cert
+    diagnosticMode:
+      enabled: false
+    # image:
+    #   repository: registry.ok3dx.local.openedx.io:5001/openedx-notes
+    #   tag: 20.0.1-ok3dx
+    meilisearch:
+      url: "http://meilisearch:7700"
+
+  meilisearch:
+    service:
+      host: meilisearch

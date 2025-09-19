@@ -1,0 +1,28 @@
+{{- if and .Values.openedx.enabled .Values.openedx.notes.enabled -}}
+apiVersion: postgresql.cnpg.io/v1
+kind: Database
+metadata:
+  name: {{ .Values.openedx.notes.db.name | default "notes" }}-db
+spec:
+  name: {{ .Values.openedx.notes.db.name | default "notes" }}
+  owner: {{ .Values.openedx.notes.db.owner }}
+  cluster:
+    name: {{ .Values.openedx.notes.db.cluster.name | default "db-cluster" }}
+
+  {{- if .Values.openedx.notes.db.extensions }}
+  extensions:
+  {{- range .Values.openedx.notes.db.extensions }}
+  - name: {{ .name }}
+    ensure: present
+  {{- end }}
+  {{- end }}
+
+  {{- if .Values.openedx.notes.db.schemas }}
+  schemas:
+  {{- range .Values.openedx.notes.db.schemas }}
+  - name: {{ .name }}
+    owner: {{ .owner }}
+  {{- end }}
+  {{- end }}
+
+{{- end -}}

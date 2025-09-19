@@ -1,0 +1,77 @@
+{{- if and .Values.openedx.enabled .Values.openedx.mfe.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mfe
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+  labels:
+    {{- include "openedx.componentLabels" (dict "component" "mfe" "root" .) | nindent 4 }}
+spec:
+  progressDeadlineSeconds: {{ .Values.openedx.mfe.progressDeadlineSeconds | default 600 }}
+  replicas: {{ .Values.openedx.mfe.replicas | default 1 }}
+  revisionHistoryLimit: {{ .Values.openedx.mfe.revisionHistoryLimit | default 10 }}
+  selector:
+    matchLabels:
+      {{- include "openedx.componentSelectorLabels" (dict "component" "mfe" "root" .) | nindent 6 }}
+
+  {{- if .Values.openedx.mfe.updateStrategy }}
+  strategy: {{- toYaml .Values.openedx.mfe.updateStrategy | nindent 4 }}
+  {{- end }}
+
+  template:
+    metadata:
+      annotations:
+        {{- include "openedx.annotations" . | nindent 8 }}
+      labels:
+        {{- include "openedx.componentLabels" (dict "component" "mfe" "root" .) | nindent 8 }}
+    spec:
+      dnsPolicy: {{ .Values.openedx.mfe.dnsPolicy | default "ClusterFirst" }}
+      restartPolicy: {{ .Values.openedx.mfe.restartPolicy | default "Always" }}
+      schedulerName: {{ .Values.openedx.mfe.schedulerName | default "default-scheduler" }}
+      securityContext: {{ toYaml .Values.openedx.mfe.securityContext | default (dict) }}
+      terminationGracePeriodSeconds: {{ .Values.openedx.mfe.terminationGracePeriodSeconds | default 30 }}
+
+      {{- include "openedx.imagePullSecrets" . | nindent 6 }}
+
+      containers:
+      - name: mfe
+        image: {{ include "openedx.image" (dict "component" "mfe" "root" .) }}
+        imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "mfe" "root" .) }}
+
+        env:
+        {{- if .Values.openedx.mfe.extraEnvVars }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.openedx.mfe.extraEnvVars "context" $) | nindent 8 }}
+        {{- end }}
+
+        {{- if .Values.openedx.mfe.resources }}
+        resources: {{- toYaml .Values.openedx.mfe.resources | nindent 12 }}
+        {{- end }}
+
+        terminationMessagePath: {{ .Values.openedx.mfe.terminationMessagePath | default "/dev/termination-log" }}
+        terminationMessagePolicy: {{ .Values.openedx.mfe.terminationMessagePolicy | default "File" }}
+
+        ports:
+        - containerPort: {{ .Values.openedx.mfe.application.port | default 8002 }}
+          protocol: TCP
+
+        volumeMounts:
+        - name: config
+          mountPath: /etc/caddy/
+        {{- if .Values.openedx.mfe.extraVolumeMounts }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.openedx.mfe.extraVolumeMounts "context" $) | nindent 8 }}
+        {{- end }}
+
+        {{- if .Values.openedx.mfe.sidecars }}
+        {{- include "common.tplvalues.render" ( dict "value" .Values.openedx.mfe.sidecars "context" $) | nindent 8 }}
+        {{- end }}
+      volumes:
+      - name: config
+        configMap:
+          name: mfe-caddy-config
+          defaultMode: 420
+      {{- if .Values.openedx.mfe.extraVolumes }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.openedx.mfe.extraVolumes "context" $) | nindent 6 }}
+      {{- end }}
+
+{{- end -}}

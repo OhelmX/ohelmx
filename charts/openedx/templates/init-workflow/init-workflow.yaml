@@ -1,0 +1,528 @@
+{{- if .Values.openedx.init.enabled }}
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: openedx-init-workflow-template
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+  labels:
+    {{- include "openedx.componentLabels" (dict "component" "openedx" "root" .) | nindent 4 }}
+
+spec:
+  entrypoint: main
+
+  {{- include "openedx.imagePullSecrets" . | nindent 2 }}
+
+  activeDeadlineSeconds: {{ .Values.openedx.init.workflow.timeout | default 3600 }}
+  serviceAccountName: argo-workflow
+  templates:
+  - name: main
+    dag:
+      tasks:
+      - name: openedx-init
+        template: openedx-init
+      - name: meilisearch-init
+        template: meilisearch-init
+        dependencies: [openedx-init]
+      - name: lms-migrate
+        template: lms-migrate
+        dependencies: [meilisearch-init]
+      - name: cms-migrate
+        template: cms-migrate
+        dependencies: [lms-migrate]
+      - name: theme-init
+        template: theme-init
+        dependencies: [cms-migrate]
+      - name: mfe-init
+        template: mfe-init
+        dependencies: [theme-init]
+      - name: forum-init
+        template: forum-init
+        dependencies: [cms-migrate]
+      - name: notes-user-init
+        template: notes-user-init
+        dependencies: [cms-migrate]
+      - name: notes-index-init
+        template: notes-index-init
+        dependencies: [notes-user-init]
+
+  - name: openedx-init
+    container:
+      image: {{ include "openedx.image" (dict "component" "lms" "root" .) }}
+      imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "lms" "root" .) }}
+
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -e
+
+          # 1. /mnt/*
+          for mounted_dir in /mnt/*; do
+              if [ -f $mounted_dir/setup.py ] && ! ls $mounted_dir/*.egg-info >/dev/null 2>&1 ; then
+                  echo "Unable to locate egg-info in $mounted_dir"
+                  pip install -e $mounted_dir
+              fi
+          done
+
+          # 2. edx-platform
+          if [ -f /openedx/edx-platform/bindmount-canary ] ; then
+            echo "Using edx-platform from image (not bind-mount)."
+            echo "No extra setup is required."
+            exit
+          fi
+
+          echo "Performing additional setup for bind-mounted edx-platform."
+          set -x
+          pip install -e .
+          npm clean-install
+          npm run build-dev
+          set -x
+      env:
+        - name: SERVICE_VARIANT
+          value: lms
+        - name: DJANGO_SETTINGS_MODULE
+          value: lms.envs.tutor.production
+        {{- include "openedx.common.env" . | nindent 8 }}
+
+      volumeMounts:
+        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
+        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
+    volumes:
+      {{- include "openedx.common.volumes" . | nindent 6 }}
+      {{- include "openedx.dev.volumes" . | nindent 6 }}
+
+  - name: forum-init
+    container:
+      image: {{ include "openedx.image" (dict "component" "lms" "root" .) }}
+      imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "lms" "root" .) }}
+
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -e
+          cd /openedx/edx-platform
+
+          (./manage.py lms waffle_flag --list | grep discussions.enable_forum_v2) || ./manage.py lms waffle_flag --create --everyone discussions.enable_forum_v2
+
+          # Switch to MySQL backend, unless a global waffle flag was already created.
+          # This allows user to stick to the MongoDb backend by creating a flag with:
+          #
+          #     ./manage.py lms waffle_flag --create --deactivate forum_v2.enable_mysql_backend
+          #
+          ./manage.py lms shell -c "
+          from waffle.models import Flag
+          flag, created = Flag.objects.get_or_create(name='forum_v2.enable_mysql_backend')
+          if created:
+              print('Configuring MySQL backend for forum data storage')
+              flag.everyone = True
+              flag.save()
+          elif not flag.everyone:
+              print('⚠️ You should migrate your forum data to MySQL: https://github.com/overhangio/tutor-forum/#installation')
+          else:
+              print('MySQL backend already configured for forum data storage')"
+
+          # Initialize indices
+          ./manage.py lms initialize_forum_indices
+
+          # Create Mongodb indexes
+          ./manage.py lms forum_create_mongodb_indexes
+
+      env:
+        - name: SERVICE_VARIANT
+          value: lms
+        - name: DJANGO_SETTINGS_MODULE
+          value: lms.envs.tutor.production
+        {{- include "openedx.common.env" . | nindent 8 }}
+
+      volumeMounts:
+        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
+        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
+
+        # FIXME: is this right for kubernetes???
+        - mountPath: /openedx/media
+          name: media-storage
+
+    volumes:
+      {{- include "openedx.common.volumes" . | nindent 6 }}
+      {{- include "openedx.dev.volumes" . | nindent 6 }}
+      - name: media-storage
+        emptyDir: {}
+
+  - name: meilisearch-init
+    container:
+      image: {{ include "openedx.image" (dict "component" "lms" "root" .) }}
+      imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "lms" "root" .) }}
+
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -e
+          cd /openedx/edx-platform
+          echo "Creating Meilisearch api key..."
+
+          ./manage.py lms shell -c "
+          import os
+          import meilisearch
+          MEILISEARCH_URL = os.getenv('MEILISEARCH_URL')
+          MEILISEARCH_MASTER_KEY = os.getenv('MEILISEARCH_MASTER_KEY')
+          MEILISEARCH_API_KEY_UID = os.getenv('MEILISEARCH_API_KEY_UID')
+          MEILISEARCH_INDEX_PREFIX = os.getenv('MEILISEARCH_INDEX_PREFIX')
+
+          client = meilisearch.Client(MEILISEARCH_URL, MEILISEARCH_MASTER_KEY)
+          try:
+              key = client.get_key(MEILISEARCH_API_KEY_UID)
+              print('Key already exists, not recreating it')
+          except meilisearch.errors.MeilisearchApiError:
+              print('Key does not exist: creating...')
+              key = client.create_key({
+                  'name': 'Open edX backend API key',
+                  'uid': MEILISEARCH_API_KEY_UID,
+                  'actions': ['*'],
+                  'indexes': [MEILISEARCH_INDEX_PREFIX + '*'],
+                  'expiresAt': None,
+                  'description': 'Use it for backend API calls -- Created by ok3dx',
+              })
+              print('Key created successfully')
+          "
+
+      env:
+        {{- include "openedx.common.env" . | nindent 8 }}
+
+        - name: MEILISEARCH_URL
+          value: "{{ .Values.openedx.meilisearch.service.scheme }}://{{ .Values.openedx.meilisearch.service.host }}:{{ .Values.openedx.meilisearch.service.port }}"
+
+        - name: MEILISEARCH_MASTER_KEY  # name of env var
+          valueFrom:
+            secretKeyRef:
+              name: meili-master     # name of an existing k8s secret
+              key: MEILI_MASTER_KEY     # 'key' subcomponent of the secret
+
+        - name: MEILISEARCH_API_KEY_UID
+          valueFrom:
+            secretKeyRef:
+              name: meili-master     # name of an existing k8s secret
+              key: apiKeyUid     # 'key' subcomponent of the secret
+
+        - name: MEILISEARCH_INDEX_PREFIX
+          value: "{{ .Values.openedx.meilisearch.indexPrefix | default "tutor_" }}"
+
+      volumeMounts:
+        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
+        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
+        - mountPath: /openedx/media
+          name: media-storage
+    volumes:
+      {{- include "openedx.common.volumes" . | nindent 6 }}
+      {{- include "openedx.dev.volumes" . | nindent 6 }}
+      - name: media-storage
+        emptyDir: {}
+
+  - name: lms-migrate
+    container:
+      image: {{ include "openedx.image" (dict "component" "lms" "root" .) }}
+      imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "lms" "root" .) }}
+
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -e
+          cd /openedx/edx-platform
+
+          echo "Loading settings $DJANGO_SETTINGS_MODULE"
+
+          ./manage.py lms migrate
+
+          # Create meilisearch indexes
+          ./manage.py lms shell -c "import search.meilisearch; search.meilisearch.create_indexes()"
+
+          # Create oauth2 apps for CMS SSO
+          # https://github.com/openedx/edx-platform/blob/master/docs/guides/studio_oauth.rst
+          ./manage.py lms manage_user cms cms@openedx --unusable-password
+          ./manage.py lms create_dot_application \
+            --grant-type authorization-code \
+            --redirect-uris "https://${PREVIEW_HOST}/complete/edx-oauth2/" \
+            --client-id cms-sso \
+            --client-secret ${SOCIAL_AUTH_EDX_OAUTH2_SECRET} \
+            --scopes user_id \
+            --skip-authorization \
+            --update cms-sso cms
+
+          # Fix incorrect uploaded file path
+          if [ -d /openedx/data/uploads/ ]; then
+            if [ -n "$(ls -A /openedx/data/uploads/)" ]; then
+              echo "Migrating LMS uploaded files to shared directory"
+              mv /openedx/data/uploads/* /openedx/media/
+              rm -rf /openedx/data/uploads/
+            fi
+          fi
+
+          # Create waffle switches to enable some features, if they have not been explicitly defined before
+          # Completion tracking: add green ticks to every completed unit
+          (./manage.py lms waffle_switch --list | grep completion.enable_completion_tracking) || ./manage.py lms waffle_switch --create completion.enable_completion_tracking on
+
+          echo "LMS migration and setup completed successfully"
+      env:
+        - name: SERVICE_VARIANT
+          value: lms
+        - name: DJANGO_SETTINGS_MODULE
+          value: lms.envs.tutor.production
+        {{- include "openedx.common.env" . | nindent 8 }}
+
+        - name: SOCIAL_AUTH_EDX_OAUTH2_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: social-auth-edx-oauth2-secret
+              key: clientSecret
+
+      volumeMounts:
+        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
+        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
+        - mountPath: /openedx/media
+          name: media-storage
+    volumes:
+      {{- include "openedx.common.volumes" . | nindent 6 }}
+      {{- include "openedx.dev.volumes" . | nindent 6 }}
+      - name: media-storage
+        emptyDir: {}
+
+  - name: cms-migrate
+    container:
+      image: {{ include "openedx.image" (dict "component" "cms" "root" .) }}
+      imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "cms" "root" .) }}
+
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -e
+          cd /openedx/edx-platform
+
+          echo "Loading settings $DJANGO_SETTINGS_MODULE"
+
+          ./manage.py cms migrate
+
+          # Fix incorrect uploaded file path
+          if [ -d /openedx/data/uploads/ ]; then
+            if [ -n "$(ls -A /openedx/data/uploads/)" ]; then
+              echo "Migrating CMS uploaded files to shared directory"
+              mv /openedx/data/uploads/* /openedx/media/
+              rm -rf /openedx/data/uploads/
+            fi
+          fi
+
+          # Create the index for studio and courseware content. Because we specify --init,
+          # this will not populate the index (potentially slow) nor replace any existing
+          # index (resulting in broken features until it is complete). If either of those
+          # are necessary, it will print instructions on what command to run to do so.
+          ./manage.py cms reindex_studio --experimental --init
+          # Create the courseware content index
+          ./manage.py cms reindex_course --active
+
+      env:
+        - name: SERVICE_VARIANT
+          value: cms
+        - name: DJANGO_SETTINGS_MODULE
+          value: cms.envs.tutor.production
+        {{- include "openedx.common.env" . | nindent 8 }}
+        {{- include "openedx.cms.env" . | nindent 8 }}
+
+      volumeMounts:
+        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
+        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
+        - mountPath: /openedx/media
+          name: media-storage
+    volumes:
+      {{- include "openedx.common.volumes" . | nindent 6 }}
+      {{- include "openedx.dev.volumes" . | nindent 6 }}
+      - name: media-storage
+        emptyDir: {}
+
+  - name: theme-init
+    container:
+      image: {{ include "openedx.image" (dict "component" "lms" "root" .) }}
+      imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "lms" "root" .) }}
+
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -e
+          cd /openedx/edx-platform
+
+          # Assign themes only if no other theme exists yet
+          ./manage.py lms shell -c "
+          import sys
+          from django.contrib.sites.models import Site
+          def assign_theme(domain):
+              site, _ = Site.objects.get_or_create(domain=domain)
+              if not site.themes.exists():
+                  site.themes.create(theme_dir_name='indigo')
+
+          assign_theme(os.environ['LMS_HOST'])
+          assign_theme(os.environ['CMS_HOST'])
+          assign_theme(os.environ['PREVIEW_HOST'])
+          "
+      env:
+        - name: SERVICE_VARIANT
+          value: lms
+        - name: DJANGO_SETTINGS_MODULE
+          value: lms.envs.tutor.production
+        {{- include "openedx.common.env" . | nindent 8 }}
+
+      volumeMounts:
+        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
+        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
+    volumes:
+      {{- include "openedx.common.volumes" . | nindent 6 }}
+      {{- include "openedx.dev.volumes" . | nindent 6 }}
+
+  - name: mfe-init
+    container:
+      image: {{ include "openedx.image" (dict "component" "lms" "root" .) }}
+      imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "lms" "root" .) }}
+
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -e
+          cd /openedx/edx-platform
+          # MFE-specific tasks
+          ./manage.py lms waffle_flag --list > /tmp/lms_waffle_flags.txt
+
+
+          ./manage.py lms populate_retirement_states
+
+          grep learner_home_mfe.enabled /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone learner_home_mfe.enabled
+
+          grep course_home.course_home_mfe_progress_tab /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone course_home.course_home_mfe_progress_tab
+          grep courseware.enable_navigation_sidebar /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone courseware.enable_navigation_sidebar
+          grep courseware.always_open_auxiliary_sidebar /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --deactivate courseware.always_open_auxiliary_sidebar
+
+          grep contentstore.new_studio_mfe.use_new_advanced_settings_page /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone contentstore.new_studio_mfe.use_new_advanced_settings_page
+          grep contentstore.new_studio_mfe.use_new_certificates_page /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone contentstore.new_studio_mfe.use_new_certificates_page
+          grep contentstore.new_studio_mfe.use_new_course_outline_page /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone contentstore.new_studio_mfe.use_new_course_outline_page
+          grep contentstore.new_studio_mfe.use_new_course_team_page /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone contentstore.new_studio_mfe.use_new_course_team_page
+          grep contentstore.new_studio_mfe.use_new_custom_pages /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone contentstore.new_studio_mfe.use_new_custom_pages
+          grep contentstore.new_studio_mfe.use_new_export_page /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone contentstore.new_studio_mfe.use_new_export_page
+          grep contentstore.new_studio_mfe.use_new_files_uploads_page /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone contentstore.new_studio_mfe.use_new_files_uploads_page
+          grep contentstore.new_studio_mfe.use_new_grading_page /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone contentstore.new_studio_mfe.use_new_grading_page
+          grep contentstore.new_studio_mfe.use_new_group_configurations_page /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone contentstore.new_studio_mfe.use_new_group_configurations_page
+          grep contentstore.new_studio_mfe.use_new_import_page /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone contentstore.new_studio_mfe.use_new_import_page
+          grep contentstore.new_studio_mfe.use_new_schedule_details_page /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone contentstore.new_studio_mfe.use_new_schedule_details_page
+          grep contentstore.new_studio_mfe.use_new_textbooks_page /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone contentstore.new_studio_mfe.use_new_textbooks_page
+          grep contentstore.new_studio_mfe.use_new_unit_page /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone contentstore.new_studio_mfe.use_new_unit_page
+          grep contentstore.new_studio_mfe.use_new_updates_page /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone contentstore.new_studio_mfe.use_new_updates_page
+          grep discussions.pages_and_resources_mfe /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone discussions.pages_and_resources_mfe
+          grep new_core_editors.use_new_problem_editor /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone new_core_editors.use_new_problem_editor
+          grep new_core_editors.use_new_text_editor /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone new_core_editors.use_new_text_editor
+          grep new_core_editors.use_new_video_editor /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone new_core_editors.use_new_video_editor
+          grep new_studio_mfe.use_new_home_page /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone new_studio_mfe.use_new_home_page
+          grep new_studio_mfe.use_tagging_taxonomy_list_page /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone new_studio_mfe.use_tagging_taxonomy_list_page
+
+          grep discussions.enable_discussions_mfe  /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone discussions.enable_discussions_mfe
+          grep discussions.enable_learners_tab_in_discussions_mfe  /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone discussions.enable_learners_tab_in_discussions_mfe
+          grep discussions.enable_moderation_reason_codes  /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone discussions.enable_moderation_reason_codes
+          grep discussions.enable_reported_content_email_notifications  /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone discussions.enable_reported_content_email_notifications
+          grep discussions.enable_learners_stats  /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone discussions.enable_learners_stats
+          grep discussions.enable_new_structure_discussions  /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone discussions.enable_new_structure_discussions
+
+          grep openresponseassessment.enhanced_staff_grader /tmp/lms_waffle_flags.txt || ./manage.py lms waffle_flag --create --everyone openresponseassessment.enhanced_staff_grader
+
+          echo "MFE initialization completed successfully."
+      env:
+        - name: SERVICE_VARIANT
+          value: lms
+        - name: DJANGO_SETTINGS_MODULE
+          value: lms.envs.tutor.production
+        {{- include "openedx.common.env" . | nindent 8 }}
+
+      volumeMounts:
+        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
+        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
+        - mountPath: /openedx/media
+          name: media-storage
+    volumes:
+      {{- include "openedx.common.volumes" . | nindent 6 }}
+      {{- include "openedx.dev.volumes" . | nindent 6 }}
+      - name: media-storage
+        emptyDir: {}
+
+  - name: notes-user-init
+    container:
+      image: {{ include "openedx.image" (dict "component" "lms" "root" .) }}
+      imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "lms" "root" .) }}
+
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -e
+          # Modify users created an incorrect email and that might clash with the newly created users
+          ./manage.py lms shell -c \
+            "from django.contrib.auth import get_user_model;\
+            get_user_model().objects.filter(username='notes').exclude(email='notes@openedx').update(email='notes@openedx')"
+
+          ./manage.py lms manage_user notes notes@openedx --staff --superuser
+          ./manage.py lms create_dot_application \
+              notes \
+              notes \
+              --redirect-uris f"http://${NOTES_SERVICE_NAME}:${NOTES_SERVICE_PORT}" \
+              --skip-authorization \
+              --client-id notes \
+              --client-secret "${SOCIAL_AUTH_NOTES_OAUTH2_SECRET}" \
+              --update
+      env:
+        - name: SERVICE_VARIANT
+          value: lms
+        - name: DJANGO_SETTINGS_MODULE
+          value: lms.envs.tutor.production
+        - name: NOTES_SERVICE_NAME
+          value: {{ .Values.openedx.notes.service.name | quote }}
+        - name: NOTES_SERVICE_PORT
+          value: {{ .Values.openedx.notes.service.port | quote }}
+        {{- include "openedx.common.env" . | nindent 8 }}
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              key: SECRET_KEY
+              name: notes-secretkey
+
+        - name: SOCIAL_AUTH_NOTES_OAUTH2_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: social-auth-notes-oauth2-secret
+              key: clientSecret
+
+      volumeMounts:
+        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
+        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
+        - mountPath: /openedx/media
+          name: media-storage
+    volumes:
+      {{- include "openedx.common.volumes" . | nindent 6 }}
+      {{- include "openedx.dev.volumes" . | nindent 6 }}
+      - name: media-storage
+        emptyDir: {}
+
+  - name: notes-index-init
+    container:
+      image: {{ include "openedx.image" (dict "component" "notes" "root" .) }}
+      imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "notes" "root" .) }}
+
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -e
+          ./manage.py migrate
+
+          # Re-index with meilisearch
+          ./manage.py shell -c "from notesapi.v1.views.meilisearch import reindex; reindex()"
+      env:
+        {{- include "openedx.notes.env" . | nindent 8 }}
+      volumeMounts:
+        - mountPath: /app/edx-notes-api/notesserver/settings/tutor.py
+          name: settings
+          subPath: tutor.py
+    volumes:
+      - configMap:
+          defaultMode: 420
+          name: notes-settings
+        name: settings
+{{- end }}

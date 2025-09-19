@@ -1,0 +1,217 @@
+{{- if and .Values.openedx.enabled .Values.openedx.lms.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openedx-settings-lms
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+  labels:
+    {{- include "openedx.componentLabels" (dict "component" "lms" "root" .) | nindent 4 }}
+data:
+  __init__.py: ""
+
+  production.py: |-
+    # -*- coding: utf-8 -*-
+    from lms.envs.production import *
+
+    {{- include "openedx.common.shared" . | nindent 4 }}
+
+    ######## Common LMS settings
+    LOGIN_REDIRECT_WHITELIST = [CMS_HOST]
+
+    # Better layout of honor code/tos links during registration
+    REGISTRATION_EXTRA_FIELDS["terms_of_service"] = "hidden"
+    REGISTRATION_EXTRA_FIELDS["honor_code"] = "hidden"
+
+    # Fix media files paths
+    PROFILE_IMAGE_BACKEND["options"]["location"] = os.path.join(
+        MEDIA_ROOT, "profile-images/"
+    )
+
+    COURSE_CATALOG_VISIBILITY_PERMISSION = "see_in_catalog"
+    COURSE_ABOUT_VISIBILITY_PERMISSION = "see_about_page"
+
+    # Allow insecure oauth2 for local interaction with local containers
+    # FIXME: can this be forced to True?
+    OAUTH_ENFORCE_SECURE = False
+
+    # Email settings
+    DEFAULT_EMAIL_LOGO_URL = LMS_ROOT_URL + "/theming/asset/images/logo.png"
+    BULK_EMAIL_SEND_USING_EDX_ACE = True
+    FEATURES["ENABLE_FOOTER_MOBILE_APP_LINKS"] = False
+
+    # Branding
+    MOBILE_STORE_ACE_URLS = {}
+    SOCIAL_MEDIA_FOOTER_ACE_URLS = {}
+
+    # Make it possible to hide courses by default from the studio
+    SEARCH_SKIP_SHOW_IN_CATALOG_FILTERING = False
+
+    # Caching
+    CACHES["staticfiles"] = {
+        "KEY_PREFIX": "staticfiles_lms",
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "staticfiles_lms",
+    }
+
+    # Enable search features
+    FEATURES["ENABLE_COURSE_DISCOVERY"] = True
+    FEATURES["ENABLE_COURSEWARE_SEARCH"] = True
+    FEATURES["ENABLE_DASHBOARD_SEARCH"] = True
+
+    # Create folders if necessary
+    for folder in [DATA_DIR, LOG_DIR, MEDIA_ROOT, STATIC_ROOT, ORA2_FILEUPLOAD_ROOT]:
+        if not os.path.exists(folder):
+            os.makedirs(folder, exist_ok=True)
+
+    # MFE: enable API and set a low cache timeout for the settings. otherwise, weird
+    # configuration bugs occur. Also, the view is not costly at all, and it's also cached on
+    # the frontend. (5 minutes, hardcoded)
+    ENABLE_MFE_CONFIG_API = True
+    MFE_CONFIG_API_CACHE_TIMEOUT = 1
+
+    # MFE-specific settings
+
+    FEATURES['ENABLE_AUTHN_MICROFRONTEND'] = True
+
+
+    FEATURES['ENABLE_NEW_BULK_EMAIL_EXPERIENCE'] = True
+
+
+    LEARNER_HOME_MFE_REDIRECT_PERCENTAGE = 100
+
+    # Student notes
+    EDXNOTES_CLIENT_NAME = "notes"
+
+    # FIXME: deleted MAIN
+    # PROFILE_IMAGE_BACKEND = {
+    #     "class": DEFAULT_FILE_STORAGE,
+    #     "options": {
+    #         "bucket_name": "openedx",
+    #         "location": PROFILE_IMAGE_BACKEND["options"]["location"].lstrip("/"),
+    #     },
+    # }
+
+    ######## End of common LMS settings
+
+
+    import json
+
+    ALLOWED_HOSTS = [
+        ENV_TOKENS.get("LMS_BASE"),
+        FEATURES["PREVIEW_LMS_BASE"],
+        "lms",
+    ]
+    CORS_ORIGIN_WHITELIST.append(f"https://{LMS_HOST}")
+
+    # Properly set the "secure" attribute on session/csrf cookies. This is required in
+    # Chrome to support samesite=none cookies.
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SAMESITE = "None"
+
+
+    # CMS authentication
+    IDA_LOGOUT_URI_LIST.append(f"https://{LMS_HOST}/logout/")
+
+    # Required to display all courses on start page
+    SEARCH_SKIP_ENROLLMENT_START_DATE_FILTERING = True
+
+    # Dynamic config API settings
+    # https://openedx.github.io/frontend-platform/module-Config.html
+    MFE_CONFIG = {
+        "BASE_URL": MFE_HOST,
+        "CSRF_TOKEN_API_PATH": "/csrf/api/v1/token",
+        "CREDENTIALS_BASE_URL": "",
+        "DISCOVERY_API_BASE_URL": os.environ.get('DISCOVERY_HOST') and f"https://{os.environ['DISCOVERY_HOST']}" or "",
+        "FAVICON_URL": f"https://{LMS_HOST}/favicon.ico",
+        "INFO_EMAIL": f"{os.environ['CONTACT_EMAIL']}",
+        "LANGUAGE_PREFERENCE_COOKIE_NAME": "openedx-language-preference",
+        "LMS_BASE_URL": f"https://{LMS_HOST}",
+        "LOGIN_URL": f"https://{LMS_HOST}/login",
+        "LOGO_URL": f"https://{LMS_HOST}/theming/asset/images/logo.png",
+        "LOGO_WHITE_URL": f"https://{LMS_HOST}/theming/asset/images/logo.png",
+        "LOGO_TRADEMARK_URL": f"https://{LMS_HOST}/theming/asset/images/logo.png",
+        "LOGOUT_URL": f"https://{LMS_HOST}/logout",
+        "MARKETING_SITE_BASE_URL": f"https://{LMS_HOST}",
+        "PASSWORD_RESET_SUPPORT_LINK": f"mailto:{os.environ['CONTACT_EMAIL']}",
+        "REFRESH_ACCESS_TOKEN_ENDPOINT": f"https://{LMS_HOST}/login_refresh",
+        "SITE_NAME": os.environ['PLATFORM_NAME'],
+        "STUDIO_BASE_URL": f"https://{CMS_HOST}",
+        "USER_INFO_COOKIE_NAME": "user-info",
+        "ACCESS_TOKEN_COOKIE_NAME": "edx-jwt-cookie-header-payload",
+    }
+
+    # MFE-specific settings
+
+
+    AUTHN_MICROFRONTEND_URL = f"https://{MFE_HOST}/authn"
+    AUTHN_MICROFRONTEND_DOMAIN  = f"{MFE_HOST}/authn"
+    MFE_CONFIG["DISABLE_ENTERPRISE_LOGIN"] = True
+
+
+
+    ACCOUNT_MICROFRONTEND_URL = f"https://{MFE_HOST}/account/"
+    MFE_CONFIG["ACCOUNT_SETTINGS_URL"] = ACCOUNT_MICROFRONTEND_URL
+
+
+
+    MFE_CONFIG["COURSE_AUTHORING_MICROFRONTEND_URL"] = f"https://{MFE_HOST}/authoring"
+    MFE_CONFIG["ENABLE_ASSETS_PAGE"] = "true"
+    MFE_CONFIG["ENABLE_HOME_PAGE_COURSE_API_V2"] = "true"
+    MFE_CONFIG["ENABLE_PROGRESS_GRAPH_SETTINGS"] = "true"
+    MFE_CONFIG["ENABLE_TAGGING_TAXONOMY_PAGES"] = "true"
+    MFE_CONFIG["ENABLE_UNIT_PAGE"] = "true"
+    MFE_CONFIG["MEILISEARCH_ENABLED"] = "true"
+
+
+
+    DISCUSSIONS_MICROFRONTEND_URL = f"https://{MFE_HOST}/discussions"
+    MFE_CONFIG["DISCUSSIONS_MFE_BASE_URL"] = DISCUSSIONS_MICROFRONTEND_URL
+    DISCUSSIONS_MFE_FEEDBACK_URL = None
+
+
+
+    WRITABLE_GRADEBOOK_URL = f"https://{MFE_HOST}/gradebook"
+
+
+
+    LEARNER_HOME_MICROFRONTEND_URL = f"https://{MFE_HOST}/learner-dashboard/"
+
+
+
+    LEARNING_MICROFRONTEND_URL = f"https://{MFE_HOST}/learning"
+    MFE_CONFIG["LEARNING_BASE_URL"] = f"https://{MFE_HOST}/learning"
+
+
+
+    ORA_GRADING_MICROFRONTEND_URL = f"https://{MFE_HOST}/ora-grading"
+
+
+
+    PROFILE_MICROFRONTEND_URL = f"https://{MFE_HOST}/profile/u/"
+    MFE_CONFIG["ACCOUNT_PROFILE_URL"] = f"https://{MFE_HOST}/profile"
+
+
+
+    COMMUNICATIONS_MICROFRONTEND_URL = f"https://{MFE_HOST}/communications"
+    MFE_CONFIG["SCHEDULE_EMAIL_SECTION"] = True
+
+
+    LOGIN_REDIRECT_WHITELIST.append(f"{MFE_HOST}")
+    CORS_ORIGIN_WHITELIST.append(f"https://{MFE_HOST}")
+    CSRF_TRUSTED_ORIGINS.append(f"https://{MFE_HOST}")
+
+
+
+
+    MFE_CONFIG['INDIGO_ENABLE_DARK_TOGGLE'] = os.environ.get('INDIGO_ENABLE_DARK_TOGGLE', True)
+    MFE_CONFIG['INDIGO_FOOTER_NAV_LINKS'] = [{'title': 'About Us', 'url': '/about'}, {'title': 'Blog', 'url': '/blog'}, {'title': 'Donate', 'url': '/donate'}, {'title': 'Terms of Service', 'url': '/tos'}, {'title': 'Privacy Policy', 'url': '/privacy'}, {'title': 'Help', 'url': '/help'}, {'title': 'Contact Us', 'url': '/contact'}]
+    EDXNOTES_PUBLIC_API = f"https://{os.environ['NOTES_HOST']}/api/v1"
+    EDXNOTES_INTERNAL_API = f"http://{os.environ['NOTES_SERVICE_HOST']}:{os.environ['NOTES_SERVICE_PORT']}/api/v1"
+
+    {{- if .Values.openedx.lms.extraDjangoSettings }}
+    {{ .Values.openedx.lms.extraDjangoSettings | indent 4 }}
+    {{- end }}
+
+{{- end -}}

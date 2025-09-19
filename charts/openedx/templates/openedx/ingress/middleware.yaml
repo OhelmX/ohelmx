@@ -1,0 +1,17 @@
+{{- if .Values.openedx.traefik.enabled -}}
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: add-headers
+spec:
+  headers:
+    customRequestHeaders:
+      X-Forwarded-Port: "443"
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: compress-gzip
+spec:
+  compress: {}
+{{- end -}}

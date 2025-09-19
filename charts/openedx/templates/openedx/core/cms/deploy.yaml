@@ -1,0 +1,122 @@
+{{- if and .Values.openedx.enabled .Values.openedx.cms.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cms
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+  labels:
+    {{- include "openedx.componentLabels" (dict "component" "cms" "root" .) | nindent 4 }}
+spec:
+  progressDeadlineSeconds: {{ .Values.openedx.cms.progressDeadlineSeconds | default 600 }}
+  replicas: {{ .Values.openedx.cms.replicas | default 1 }}
+  revisionHistoryLimit: {{ .Values.openedx.cms.revisionHistoryLimit | default 10 }}
+
+  selector:
+    matchLabels:
+      {{- include "openedx.componentSelectorLabels" (dict "component" "cms" "root" .) | nindent 6 }}
+
+  {{- if .Values.openedx.cms.updateStrategy }}
+  strategy: {{- toYaml .Values.openedx.cms.updateStrategy | nindent 4 }}
+  {{- end }}
+
+  template:
+    metadata:
+      annotations:
+        {{- include "openedx.annotations" . | nindent 8 }}
+      labels:
+        {{- include "openedx.componentLabels" (dict "component" "cms" "root" .) | nindent 8 }}
+    spec:
+      dnsPolicy: {{ .Values.openedx.cms.dnsPolicy | default "ClusterFirst" }}
+      restartPolicy: {{ .Values.openedx.cms.restartPolicy | default "Always" }}
+      schedulerName: {{ .Values.openedx.cms.schedulerName | default "default-scheduler" }}
+      # securityContext: { toYaml .Values.openedx.cms.securityContext | default (dict) }
+      securityContext:
+        runAsGroup: 1000
+        runAsUser: 1000
+      terminationGracePeriodSeconds: {{ .Values.openedx.cms.terminationGracePeriodSeconds | default 30 }}
+
+      {{- include "openedx.imagePullSecrets" . | nindent 6 }}
+
+      containers:
+      - name: {{ .Values.openedx.cms.application.name | default "cms" }}
+        image: {{ include "openedx.image" (dict "component" "cms" "root" .) }}
+        imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "cms" "root" .) }}
+
+        {{- if .Values.openedx.cms.diagnosticMode.enabled }}
+        command: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cms.diagnosticMode.command "context" $) | nindent 10 }}
+        {{- else if .Values.openedx.cms.command }}
+        command: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cms.command "context" $) | nindent 10 }}
+        {{- end }}
+        {{- if .Values.openedx.cms.diagnosticMode.enabled }}
+        args: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cms.diagnosticMode.args "context" $) | nindent 10 }}
+        {{- else if .Values.openedx.cms.args }}
+        args: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cms.args "context" $) | nindent 11 }}
+        {{- end }}
+
+        ports:
+        - containerPort: {{ .Values.openedx.cms.application.port | default 8000 }}
+          protocol: TCP
+
+        # resources:
+        #   requests:
+        #     memory: 2Gi
+        {{- if .Values.openedx.cms.resources }}
+        resources: {{- toYaml .Values.openedx.cms.resources | nindent 12 }}
+        {{- end }}
+
+        terminationMessagePath: {{ .Values.openedx.cms.terminationMessagePath | default "/dev/termination-log" }}
+        terminationMessagePolicy: {{ .Values.openedx.cms.terminationMessagePolicy | default "File" }}
+
+        securityContext:
+          allowPrivilegeEscalation: false
+
+        env:
+        - name: SERVICE_VARIANT
+          value: cms
+        - name: DJANGO_SETTINGS_MODULE
+          value: cms.envs.tutor.production
+        - name: UWSGI_WORKERS
+          value: {{ .Values.openedx.cms.uwsgiWorkers | quote }}
+        - name: LISTEN_PORT
+          value: {{ .Values.openedx.cms.application.port | default 8000 | quote }}
+        - name: SITE_ID
+          value: {{ .Values.openedx.cms.siteId | quote }}
+
+        {{- include "openedx.common.env" . | nindent 8 }}
+        {{- include "openedx.cms.env" . | nindent 8 }}
+
+        {{- if .Values.openedx.cms.extraEnvVars }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cms.extraEnvVars "context" $) | nindent 8 }}
+        {{- end }}
+
+        volumeMounts:
+        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
+        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
+        - name: uwsgi-config
+          mountPath: /openedx/uwsgi.ini
+          subPath: uwsgi.ini
+
+        {{- if .Values.openedx.cms.extraVolumeMounts }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cms.extraVolumeMounts "context" $) | nindent 8 }}
+        {{- end }}
+
+        {{- if .Values.openedx.cms.sidecars }}
+        {{- include "common.tplvalues.render" ( dict "value" .Values.openedx.cms.sidecars "context" $) | nindent 8 }}
+        {{- end }}
+
+      volumes:
+      {{- include "openedx.common.volumes" . | nindent 6 }}
+      {{- include "openedx.dev.volumes" . | nindent 6 }}
+      - name: uwsgi-config
+        configMap:
+          name: openedx-uwsgi-config
+          defaultMode: 420
+          items:
+          - key: uwsgi.ini
+            path: uwsgi.ini
+      {{- if .Values.openedx.cms.extraVolumes }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cms.extraVolumes "context" $) | nindent 6 }}
+      {{- end }}
+
+{{- end -}}

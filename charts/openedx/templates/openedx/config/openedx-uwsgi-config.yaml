@@ -1,0 +1,39 @@
+{{- if .Values.openedx.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openedx-uwsgi-config
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+  labels:
+    {{- include "openedx.componentLabels" (dict "component" "openedx" "root" .) | nindent 4 }}
+
+data:
+  uwsgi.ini: |+
+    [uwsgi]
+    static-map = /static=/openedx/staticfiles/
+    static-map = /media=/openedx/media/
+    http = 0.0.0.0:$(LISTEN_PORT)
+    buffer-size = 8192
+    wsgi-file = $(SERVICE_VARIANT)/wsgi.py
+    processes = $(UWSGI_WORKERS)
+    thunder-lock = true
+    single-interpreter = true
+    enable-threads = true
+    # Fix 502 errors for closed connections
+    http-keepalive = 1
+    add-header = Connection: Keep-Alive
+    # Better startup/shutdown in docker:
+    die-on-term = true
+    lazy-apps = false
+    need-app = true
+    no-defer-accept = true
+    # Enable the master process for performance
+    master = true
+    # Clean up settings
+    py-call-osafterfork = true
+    vacuum = true
+    {{- if .Values.openedx.isDev }}
+    py-autoreload = 1
+    {{- end }}
+{{- end -}}

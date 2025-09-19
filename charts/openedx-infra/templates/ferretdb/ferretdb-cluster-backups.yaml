@@ -1,0 +1,16 @@
+{{- if and .Values.ferretdb.backups.enabled .Values.ferretdb.backups.schedule -}}
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: documentdb-cluster-backup
+  annotations:
+    {{- include "openedxinfra.annotations" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.ferretdb.backups.schedule | quote }}
+  backupOwnerReference: self
+  cluster:
+    name: {{ .Values.ferretdb.cluster.name | quote }}
+  method: plugin
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
+{{- end }}

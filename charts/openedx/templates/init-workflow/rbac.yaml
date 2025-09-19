@@ -1,0 +1,26 @@
+# FIXME: unused - probably delete
+{{- if and false .Values.openedx.init.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: openedx-init-waiter-role
+  namespace: {{ .Values.global.namespace }}
+rules:
+- apiGroups: ["argoproj.io"]
+  resources: ["workflows"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: openedx-init-waiter-binding
+  namespace: {{ .Values.global.namespace }}
+subjects:
+- kind: ServiceAccount
+  name: argo-workflow
+  namespace: {{ .Values.global.namespace }}
+roleRef:
+  kind: Role
+  name: openedx-init-waiter-role
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

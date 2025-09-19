@@ -1,0 +1,22 @@
+{{- if and .Values.openedx.enabled .Values.openedx.mfe.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.openedx.mfe.service.name | default "mfe" }}
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+  labels:
+    {{- include "openedx.componentLabels" (dict "component" "mfe" "root" .) | nindent 4 }}
+spec:
+  # FIXME: why NodePort?
+  type: NodePort
+  ports:
+  - port: {{ .Values.openedx.mfe.service.port | default 8002 }}
+    protocol: TCP
+    targetPort: {{ .Values.openedx.mfe.application.port | default 8002 }}
+
+  selector:
+    {{- include "openedx.componentSelectorLabels" (dict "component" "mfe" "root" .) | nindent 4 }}
+status:
+  loadBalancer: {}
+{{- end -}}

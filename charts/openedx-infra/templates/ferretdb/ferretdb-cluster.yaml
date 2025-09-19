@@ -1,0 +1,101 @@
+{{- if .Values.ferretdb.enabled }}
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Values.ferretdb.cluster.name | default "documentdb-cluster" }}
+  annotations:
+    {{- include "openedxinfra.annotations" . | nindent 4 }}
+    # required for seamless bootstrap: https://github.com/cloudnative-pg/cloudnative-pg/issues/5778#issuecomment-2783417464
+    cnpg.io/skipEmptyWalArchiveCheck: "enabled"
+  labels:
+    {{- include "openedxinfra.componentLabels" (dict "component" "ferretdb" "root" .) | nindent 4 }}
+spec:
+  instances: {{ .Values.ferretdb.cluster.instances | default 1 }}
+  imageName: {{ .Values.ferretdb.cluster.image.repository | default "ghcr.io/ferretdb/postgres-documentdb" }}:{{ .Values.ferretdb.cluster.image.tag | default "17-0.106.0-ferretdb-2.5.0" }}
+  imagePullPolicy: {{ .Values.ferretdb.cluster.image.pullPolicy | default "IfNotPresent" }}
+  # Custom UID/GID for the postgres user inside the container - apparently needed for pg_documentdb
+  postgresUID: 999
+  postgresGID: 999
+  storage:
+    size: {{ .Values.ferretdb.cluster.storage.size | default "5Gi" }}
+
+  enableSuperuserAccess: true
+
+  superuserSecret:
+    name: {{ .Values.ferretdb.cluster.superuserSecret.name | default "documentdb-super-credentials" }}
+
+  bootstrap:
+  {{- if .Values.ferretdb.cluster.bootstrap.source }}
+  # To restore from a backup
+    recovery:
+      source: {{ .Values.ferretdb.cluster.bootstrap.recovery.source | default "bootstrap-source" }}
+  externalClusters:
+  - name: {{ .Values.ferretdb.cluster.bootstrap.recovery.source | default "bootstrap-source" }}
+    plugin:
+      name: barman-cloud.cloudnative-pg.io
+      parameters:
+        barmanObjectName: {{ .Values.ferretdb.cluster.bootstrap.recovery.barmanObjectName | default "minio-store-documentdb" }}
+  {{- else }}
+    initdb:
+      database: {{ .Values.ferretdb.cluster.bootstrap.dbName | default "ferretdb" }}
+      owner: {{ .Values.ferretdb.cluster.bootstrap.dbOwner | default "ferret" }}
+      secret:
+        name: {{ .Values.ferretdb.cluster.bootstrap.userSecret | default "documentdb-db-credentials" }}
+      postInitApplicationSQL:
+        - 'CREATE EXTENSION IF NOT EXISTS documentdb CASCADE;'
+        - 'CREATE EXTENSION IF NOT EXISTS pg_cron;'
+        - 'GRANT documentdb_admin_role TO {{ .Values.ferretdb.cluster.bootstrap.dbOwner | default "ferret" }};'
+  {{- end }}
+
+  {{- if and .Values.ferretdb.cluster.walArchive.enabled .Values.ferretdb.cluster.walArchive.barmanObjectName }}
+  plugins:
+  - name: barman-cloud.cloudnative-pg.io
+    isWALArchiver: true
+    parameters:
+      barmanObjectName: {{ .Values.ferretdb.cluster.walArchive.barmanObjectName | default "minio-store-documentdb" }}
+  {{- end }}
+
+  {{- if or .Values.ferretdb.cluster.managed.services .Values.ferretdb.cluster.extraRoles }}
+  managed:
+    {{- with .Values.ferretdb.cluster.managed.services }}
+    services:
+      {{ . | toYaml | nindent 6 }}
+    {{- end }}
+
+    {{- if .Values.ferretdb.cluster.extraRoles }}
+    roles:
+      {{- range .Values.ferretdb.cluster.extraRoles }}
+      {{ . | toYaml | nindent 6 }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+
+  postgresql:
+    shared_preload_libraries:
+      - pg_cron
+      - pg_documentdb_core
+      - pg_documentdb
+    parameters:
+      # pg_cron needs to know which database FerretDB uses
+      cron.database_name: {{ .Values.ferretdb.cluster.bootstrap.dbName | default "ferretdb" }}
+      # The parameters below are necessary to run ferretdb without superuser access
+      # Copied from https://github.com/FerretDB/documentdb/blob/ferretdb/packaging/10-preload.sh
+      documentdb.enableCompact: "true"
+      documentdb.enableLetAndCollationForQueryMatch: "true"
+      documentdb.enableNowSystemVariable: "true"
+      documentdb.enableSortbyIdPushDownToPrimaryKey: "true"
+      documentdb.enableSchemaValidation: "true"
+      documentdb.enableBypassDocumentValidation: "true"
+      documentdb.enableUserCrud: "true"
+      documentdb.maxUserLimit: "100"
+
+    pg_hba:
+      # pg_cron always runs as `postgres`
+      - host {{ .Values.ferretdb.cluster.bootstrap.dbName | default "ferretdb" }} postgres localhost trust
+      # This is needed to prevent fe_sendauth error
+      - host {{ .Values.ferretdb.cluster.bootstrap.dbName | default "ferretdb" }} {{ .Values.ferretdb.cluster.bootstrap.dbOwner | default "ferret" }} localhost trust
+
+      # - host postgres postgres 127.0.0.1/32 trust
+      # - host postgres postgres ::1/128 trust
+
+{{- end }}

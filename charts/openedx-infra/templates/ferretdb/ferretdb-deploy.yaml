@@ -1,0 +1,50 @@
+{{- if .Values.ferretdb.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ferretdb
+  annotations:
+    {{- include "openedxinfra.annotations" . | nindent 4 }}
+  labels:
+    {{- include "openedxinfra.componentLabels" (dict "component" "ferretdb" "root" .) | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "openedxinfra.componentSelectorLabels" (dict "component" "ferretdb" "root" .) | nindent 6 }}
+
+  template:
+    metadata:
+      annotations:
+        {{- include "openedxinfra.annotations" . | nindent 8 }}
+      labels:
+        {{- include "openedxinfra.componentLabels" (dict "component" "ferretdb" "root" .) | nindent 8 }}
+
+    spec:
+      containers:
+        - name: ferretdb
+          image: {{ .Values.ferretdb.application.image.repository | default "ghcr.io/ferretdb/ferretdb" }}:{{ .Values.ferretdb.application.image.tag | default "2.5.0" }}
+          ports:
+            - containerPort: {{ .Values.ferretdb.service.port | default 27017 }}
+          env:
+            - name: PGHOST
+              value: "{{ .Values.ferretdb.cluster.name | default "documentdb-cluster" }}-rw"
+            - name: PGPORT
+              value: "5432" # default Postgres port, can I set this in the chart values to something else?
+            - name: PGUSER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.ferretdb.cluster.userSecret | default "documentdb-db-credentials" }}
+                  key: username
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.ferretdb.cluster.userSecret | default "documentdb-db-credentials" }}
+                  key: password
+            - name: PGDATABASE
+              value: "{{ .Values.ferretdb.cluster.bootstrap.dbName | default "ferretdb" }}"
+            - name: FERRETDB_POSTGRESQL_URL
+              value: 'postgresql://$(PGUSER):$(PGPASSWORD)@$(PGHOST):$(PGPORT)/$(PGDATABASE)'
+            - name: FERRETDB_AUTH
+              value: {{ .Values.ferretdb.auth | default "true" | quote }}
+{{- end }}

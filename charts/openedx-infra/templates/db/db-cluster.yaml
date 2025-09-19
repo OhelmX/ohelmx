@@ -1,0 +1,66 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .Values.db.cluster.name | default "db-cluster" }}
+  annotations:
+    {{- include "openedxinfra.annotations" . | nindent 4 }}
+    # required for seamless bootstrap: https://github.com/cloudnative-pg/cloudnative-pg/issues/5778#issuecomment-2783417464
+    cnpg.io/skipEmptyWalArchiveCheck: "enabled"
+  labels:
+    {{- include "openedxinfra.componentLabels" (dict "component" "db" "root" .) | nindent 4 }}
+
+spec:
+  instances: {{ .Values.db.cluster.instances | default 1 }}
+  imageName: {{ .Values.db.cluster.image.repository | default "ghcr.io/cloudnative-pg" }}:{{ .Values.db.cluster.image.tag | default "18-standard-trixie" }}
+  imagePullPolicy: {{ .Values.db.cluster.image.pullPolicy | default "IfNotPresent" }}
+  superuserSecret:
+    name: {{ .Values.db.cluster.superuserSecret.name | default "db-super-credentials" }}
+  # Custom UID/GID for the postgres user inside the container - not needed unless you have special requirements
+  # postgresUID: 101
+  # postgresGID: 102
+  enableSuperuserAccess: true
+  storage:
+    size: {{ .Values.db.cluster.storage.size | default "5Gi" }}
+
+  bootstrap:
+  {{- if .Values.db.cluster.bootstrap.source }}
+  # To restore from a backup
+    recovery:
+      source: {{ .Values.db.cluster.bootstrap.recovery.source | default "bootstrap-source" }}
+  externalClusters:
+  - name: {{ .Values.db.cluster.bootstrap.recovery.source | default "bootstrap-source" }}
+    plugin:
+      name: barman-cloud.cloudnative-pg.io
+      parameters:
+        barmanObjectName: {{ .Values.db.cluster.bootstrap.recovery.barmanObjectName | default "minio-store-db" }}
+
+  {{- else }}
+  # To bootstrap a new database (needs supabase-migratejob.yaml afterwards)
+    initdb:
+      database: {{ .Values.db.cluster.bootstrap.dbName | default "openedx" }}
+      owner: {{ .Values.db.cluster.bootstrap.dbOwner | default "openedx" }}
+      secret:
+        name: {{ .Values.db.cluster.bootstrap.userSecret | default "openedx-db-credentials" }}
+  {{- end }}
+
+  {{- if and .Values.db.cluster.walArchive.enabled .Values.db.cluster.walArchive.barmanObjectName }}
+  plugins:
+  - name: barman-cloud.cloudnative-pg.io
+    isWALArchiver: true
+    parameters:
+      barmanObjectName: {{ .Values.db.cluster.walArchive.barmanObjectName | default "minio-store-db" }}
+  {{- end }}
+
+  {{- if or .Values.db.cluster.managed.services .Values.db.cluster.extraRoles }}
+  managed:
+    {{- with .Values.db.cluster.managed.services }}
+    services:
+      {{ . | toYaml | nindent 6 }}
+    {{- end }}
+
+    {{- if .Values.db.cluster.extraRoles }}
+    roles:
+      {{- toYaml .Values.db.cluster.extraRoles | nindent 6 }}
+
+    {{- end }}
+  {{- end }}

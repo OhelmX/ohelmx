@@ -1,0 +1,23 @@
+{{- if and .Values.meilisearch.enabled .Values.project.local.enableNodePorts -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: meilisearch-nodeport
+  labels:
+    app.kubernetes.io/component: search-engine
+    app.kubernetes.io/instance: openedx
+    app.kubernetes.io/name: meilisearch
+
+spec:
+  type: NodePort
+  ports:
+  - name: nodeport-meilisearch
+    nodePort: 30436
+    port: 7700
+    protocol: TCP
+    targetPort: 7700
+  selector:
+    app.kubernetes.io/instance: openedx
+    app.kubernetes.io/name: meilisearch
+
+{{- end -}}

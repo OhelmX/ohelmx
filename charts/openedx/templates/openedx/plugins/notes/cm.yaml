@@ -1,0 +1,51 @@
+{{- if and .Values.openedx.enabled .Values.openedx.notes.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: notes-settings
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+  labels:
+    {{- include "openedx.componentLabels" (dict "component" "notes" "root" .) | nindent 4 }}
+data:
+  tutor.py: |+
+    from .common import *
+    import os
+    import json
+
+    SECRET_KEY = os.environ['SECRET_KEY']
+    ALLOWED_HOSTS = [
+        "notes",
+        f"{os.environ['NOTES_HOST']}",
+    ]
+    options = json.loads(os.environ['DB_OPTIONS'])
+    DATABASES = {
+        "default": {
+            "ENGINE": f"django.db.backends.{ os.environ['DB_TYPE'] }",
+            "HOST": os.environ['DB_HOST'],
+            "PORT": os.environ['DB_PORT'],
+            "NAME": os.environ['DB_DATABASE'],
+            "USER": os.environ['DB_USERNAME'],
+            "PASSWORD": os.environ['DB_PASSWORD'],
+        }
+    }
+    if options:
+        DATABASES['default']['OPTIONS'] = options
+
+    CLIENT_ID = os.environ['CLIENT_ID']
+    CLIENT_SECRET = os.environ['CLIENT_SECRET']
+
+    # Meilisearch credentials
+    ES_DISABLED = os.environ['ES_DISABLED'] == 'True'
+    MEILISEARCH_ENABLED = os.environ['MEILISEARCH_ENABLED'] == 'True'
+    MEILISEARCH_URL = os.environ['MEILISEARCH_URL']
+    MEILISEARCH_API_KEY = os.environ['MEILISEARCH_API_KEY']
+    MEILISEARCH_INDEX = os.environ['MEILISEARCH_INDEX']
+
+    LOGGING = json.loads(os.environ['LOGGING'])
+
+    {{- if .Values.openedx.notes.extraDjangoSettings }}
+    {{ .Values.openedx.notes.extraDjangoSettings | indent 4 }}
+    {{- end }}
+
+{{- end -}}

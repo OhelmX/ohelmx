@@ -1,0 +1,17 @@
+apiVersion: v2
+name: ok3dx
+description: A Helm chart for hacking on and deploying the Open edX platform
+type: application
+version: 0.1.0
+appVersion: "v1"
+keywords:
+  - openedx
+  - k3d
+  - kubernetes
+  - helm
+home: https://github.com/AntonOfTheWoods/ok3dx
+sources:
+  - https://github.com/AntonOfTheWoods/ok3dx
+maintainers:
+  - name: Anton MELSER
+    url: https://github.com/AntonOfTheWoods/ok3dx

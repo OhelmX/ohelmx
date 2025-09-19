@@ -1,0 +1,26 @@
+.DS_Store
+.vscode
+.direnv
+.devenv
+
+# Build cache directories
+.buildcache/
+
+node_modules
+/packages/**/dist
+/build
+
+.mypy_cache
+tmp/
+dist
+
+.env.local
+.env
+.env.*.local
+# .env.test.local
+# .env.production.local
+
+docker-compose.override.yml
+*.egg-info
+.venv
+local/

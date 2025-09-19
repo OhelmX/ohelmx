@@ -1,0 +1,30 @@
+{{- if and .Values.db.backups.enabled .Values.db.backups.barmanObjectName .Values.db.cluster.walArchive.enabled -}}
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: {{ .Values.db.backups.barmanObjectName | default "minio-store-db" }}
+  annotations:
+    {{- include "openedxinfra.annotations" . | nindent 4 }}
+  labels:
+    {{- include "openedxinfra.componentLabels" (dict "component" "db" "root" .) | nindent 4 }}
+
+spec:
+  retentionPolicy: {{ .Values.db.backups.retention | default "7d" | quote }}
+  configuration:
+    destinationPath: s3://{{ .Values.db.backups.destinationPath | default "db-backups" }}
+    endpointURL: {{ .Values.db.backups.endpointURL | default "http://minio.backups.svc.cluster.local" }}
+    s3Credentials:
+      accessKeyId:
+        name: {{ .Values.db.backups.s3Credentials.accessKeyId.name | default "minio-backups-secret" }}
+        key: {{ .Values.db.backups.s3Credentials.accessKeyId.key | default "user" }}
+      secretAccessKey:
+        name: {{ .Values.db.backups.s3Credentials.secretAccessKey.name | default "minio-backups-secret" }}
+        key: {{ .Values.db.backups.s3Credentials.secretAccessKey.key | default "password" }}
+
+    wal:
+      # bzip2;gzip;lz4;snappy;xz;zstd
+      compression: {{ .Values.db.backups.walCompression | default "bzip2" }}
+    data:
+      # bzip2;gzip;snappy
+      compression: {{ .Values.db.backups.dataCompression | default "bzip2" }}
+{{- end -}}

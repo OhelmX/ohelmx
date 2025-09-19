@@ -1,0 +1,12 @@
+dependencies:
+- name: tenant
+  repository: https://operator.min.io/
+  version: 7.1.1
+- name: meilisearch
+  repository: https://meilisearch.github.io/meilisearch-kubernetes/
+  version: 0.17.1
+- name: redis
+  repository: https://ot-container-kit.github.io/helm-charts/
+  version: 0.16.6
+digest: sha256:da12e073ed971a8b320a366dbad81adf863efa71109d32fab3879cfae2ba56ec
+generated: "2025-09-30T14:56:50.065369885+08:00"

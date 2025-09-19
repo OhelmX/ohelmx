@@ -1,0 +1,39 @@
+{{- if and .Values.openedx.enabled .Values.openedx.isDev -}}
+#  localRoutes:
+#    - name: mypath
+#      path: /mypath
+#      suppressPath: false
+#      port: 5001
+#      targetPort: 5001
+{{- $root := . -}}
+{{- $sections := list "mfe" "lms" "cms" "notes" }}
+{{- range $section := $sections }}
+{{- $routes := index $root.Values.openedx $section "localRoutes" }}
+{{- range $route := $routes }}
+{{- if $route.suppressPath }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: stripprefix-{{ $section }}-{{ $route.name }}
+spec:
+  stripPrefixRegex:
+    regex:
+      - "^{{ $route.path }}"
+{{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: external-{{ $section }}-{{ $route.name }}
+  annotations:
+    {{- include "openedx.annotations" $ | nindent 4 }}
+spec:
+  type: ExternalName
+  externalName: host.k3d.internal
+  ports:
+    - port: {{ $route.port }}
+      targetPort: {{ $route.port }}
+{{- end }}
+{{- end }}
+{{- end }}

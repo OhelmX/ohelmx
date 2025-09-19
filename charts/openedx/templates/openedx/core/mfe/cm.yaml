@@ -1,0 +1,140 @@
+{{- if and .Values.openedx.enabled .Values.openedx.mfe.enabled -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mfe-caddy-config
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+  labels:
+    {{- include "openedx.componentLabels" (dict "component" "mfe" "root" .) | nindent 4 }}
+data:
+  Caddyfile: |
+    :8002 {
+        log {
+            output stdout
+            format filter {
+                wrap json
+                fields {
+                    common_log delete
+                    request>headers delete
+                    resp_headers delete
+                    tls delete
+                }
+            }
+        }
+
+        reverse_proxy /api/mfe_config/v1* lms:{{ .Values.openedx.lms.service.port | default 8000 }} {
+            # We need to specify the host header, otherwise it will be rejected with 400
+            # from the lms.
+            header_up Host {{ .Values.openedx.lms.host }}
+        }
+
+        # redirect /course-authoring to /authoring, for backward compatibility
+        @authoring path_regexp authoring /course-authoring/(.*)
+        redir @authoring /authoring/{re.authoring.1} permanent
+
+        @mfe_authn {
+            path /authn /authn/*
+        }
+        handle @mfe_authn {
+            uri strip_prefix /authn
+            root * /openedx/dist/authn
+            try_files /{path} /index.html
+            file_server
+        }
+
+        @mfe_authoring {
+            path /authoring /authoring/*
+        }
+        handle @mfe_authoring {
+            uri strip_prefix /authoring
+            root * /openedx/dist/authoring
+            try_files /{path} /index.html
+            file_server
+        }
+
+        @mfe_account {
+            path /account /account/*
+        }
+        handle @mfe_account {
+            uri strip_prefix /account
+            root * /openedx/dist/account
+            try_files /{path} /index.html
+            file_server
+        }
+
+        @mfe_communications {
+            path /communications /communications/*
+        }
+        handle @mfe_communications {
+            uri strip_prefix /communications
+            root * /openedx/dist/communications
+            try_files /{path} /index.html
+            file_server
+        }
+
+        @mfe_discussions {
+            path /discussions /discussions/*
+        }
+        handle @mfe_discussions {
+            uri strip_prefix /discussions
+            root * /openedx/dist/discussions
+            try_files /{path} /index.html
+            file_server
+        }
+
+        @mfe_gradebook {
+            path /gradebook /gradebook/*
+        }
+        handle @mfe_gradebook {
+            uri strip_prefix /gradebook
+            root * /openedx/dist/gradebook
+            try_files /{path} /index.html
+            file_server
+        }
+
+        @mfe_learner-dashboard {
+            path /learner-dashboard /learner-dashboard/*
+        }
+        handle @mfe_learner-dashboard {
+            uri strip_prefix /learner-dashboard
+            root * /openedx/dist/learner-dashboard
+            try_files /{path} /index.html
+            file_server
+        }
+
+        @mfe_learning {
+            path /learning /learning/*
+        }
+        handle @mfe_learning {
+            uri strip_prefix /learning
+            root * /openedx/dist/learning
+            try_files /{path} /index.html
+            file_server
+        }
+
+        @mfe_ora-grading {
+            path /ora-grading /ora-grading/*
+        }
+        handle @mfe_ora-grading {
+            uri strip_prefix /ora-grading
+            root * /openedx/dist/ora-grading
+            try_files /{path} /index.html
+            file_server
+        }
+
+        @mfe_profile {
+            path /profile /profile/*
+        }
+        handle @mfe_profile {
+            uri strip_prefix /profile
+            root * /openedx/dist/profile
+            try_files /{path} /index.html
+            file_server
+        }
+    }
+    {{- if .Values.openedx.mfe.extraCaddyConfig }}
+    {{ .Values.openedx.mfe.extraCaddyConfig | indent 4 }}
+    {{- end }}
+
+{{- end -}}

@@ -1,0 +1,70 @@
+{{- if and .Values.openedx.traefik.enabled .Values.openedx.mfe.enabled -}}
+{{- $host := .Values.openedx.mfe.host }}
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: mfe-ingressroute
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+{{- range .Values.openedx.mfe.localRoutes }}
+    - match: Host(`{{ .host | default $host }}`) && PathPrefix(`{{ .path }}`)
+      kind: Rule
+      middlewares:
+        - name: apps-body-limit
+        - name: add-headers
+        - name: compress-gzip
+{{- if .suppressPath }}
+        - name: stripprefix-mfe-{{ .name }}
+{{- end }}
+      services:
+        - name: external-mfe-{{ .name }}
+          port: {{ .port }}
+{{- end }}
+    - match: Host(`{{ $host }}`) && Path(`/`)
+      kind: Rule
+      middlewares:
+      - name: apps-redirect
+      services:
+      - name: {{ .Values.openedx.mfe.service.name | default "mfe" }}
+        port: {{ .Values.openedx.mfe.service.port | default 8002 }}
+    - match: Host(`{{ $host }}`)
+      kind: Rule
+      middlewares:
+      - name: apps-body-limit
+      - name: add-headers
+      - name: compress-gzip
+      services:
+      - name: {{ .Values.openedx.mfe.service.name | default "mfe" }}
+        port: {{ .Values.openedx.mfe.service.port | default 8002 }}
+  tls:
+    {{- include "openedx.ingressroute.tlsname" (dict "component" "mfe" "root" .) | nindent 4 }}
+---
+{{- include "openedx.ingressroute.tlscertificate" (dict "component" "mfe" "root" .) }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: apps-redirect
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+spec:
+  redirectRegex:
+    regex: ^(.*)$
+    replacement: https://{{ .Values.openedx.lms.host }}/
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: apps-body-limit
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+spec:
+  buffering:
+    maxRequestBodyBytes: {{ .Values.openedx.mfe.ingress.maxRequestBodyBytes | default 2097152 }}  # 2MB
+    memRequestBodyBytes: {{ .Values.openedx.mfe.ingress.memRequestBodyBytes | default 2097152 }}
+    maxResponseBodyBytes: {{ .Values.openedx.mfe.ingress.maxResponseBodyBytes | default 0 }} # 0 = unlimited
+{{- end -}}

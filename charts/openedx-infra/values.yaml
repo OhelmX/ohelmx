@@ -1,0 +1,255 @@
+
+global:
+  isDev: false
+  namespace: openedx
+  openedxVersion: "20.0.1-main"
+  instanceId: "openedx-instance"
+  redirectHttp: true
+
+project:
+  local:
+    enabled: false
+    enableNodePorts: false
+
+# Common labels and annotations
+commonLabels:
+  app.kubernetes.io/part-of: openedx
+  # app.kubernetes.io/managed-by: Helm
+  # Additional common labels can be added here
+
+commonAnnotations: {}
+  # App version annotation will be automatically added
+  # Additional annotations can be added here
+
+db:
+  enabled: true
+  backups:
+    enabled: true
+    schedule: "0 30 2 * * *"  # At 02:30:00 (UTC) every day
+    retention: 7d          # keep 7 backups
+    barmanObjectName: minio-store-db
+    destinationPath: "db-backups"
+    endpointURL: "http://minio.backups.svc.cluster.local"
+    walCompression: bzip2  # bzip2;gzip;lz4;snappy;xz;zstd
+    dataCompression: bzip2  # bzip2;gzip;snappy
+    s3Credentials:
+      accessKeyId:
+        name: minio-backups-secret
+        key: user
+      secretAccessKey:
+        name: minio-backups-secret
+        key: password
+
+  cluster:
+    name: db-cluster
+    instances: 1
+    image:
+      repository: "ghcr.io/cloudnative-pg/postgresql"
+      tag: "18-standard-trixie"
+      pullPolicy: IfNotPresent
+    superuserSecret:
+      name: db-super-credentials
+    storage:
+      size: 5Gi
+
+    managed:
+      services:
+        disabledDefaultServices: ["ro", "r"]
+
+    # To bootstrap a new database (needs db-migratejob.yaml afterwards)
+    bootstrap:
+      enabled: true
+      dbName: openedx
+      userSecret: openedx-db-credentials
+      superuserSecret:
+        name: db-super-credentials
+    # # To restore from a backup
+    #   source: bootstrap-source-db
+    #   barmanObjectName: minio-store-db
+
+    walArchive:
+      enabled: true
+      barmanObjectName: minio-store-db
+
+    extraRoles: []
+      # example:
+      # - name: notes
+      #   ensure: present
+      #   comment: "OpenedX Application User"
+      #   login: true
+      #   createdb: true
+      #   createrole: false
+      #   replication: false
+      #   bypassrls: false
+      #   passwordSecret:
+      #     name: notes-db-credentials
+
+ferretdb:
+  enabled: true
+  application:
+    image:
+      repository: ghcr.io/ferretdb/ferretdb
+      tag: 2.5.0
+      pullPolicy: IfNotPresent
+    port: 27017
+  service:
+    name: mongodb
+    type: ClusterIP
+    port: 27017
+  auth: "true" # "true" or "false", whether to enable authentication in FerretDB
+  backups:
+    enabled: true
+    schedule: "0 0 2 * * *"  # At 02:00:00 (UTC) every day
+    retention: "7d"           # keep 7 backups
+    barmanObjectName: minio-store-documentdb
+    destinationPath: "documentdb-backups"
+    endpointURL: "http://minio.backups.svc.cluster.local"
+    walCompression: bzip2  # bzip2;gzip;lz4;snappy;xz;zstd
+    dataCompression: bzip2  # bzip2;gzip;snappy
+    s3Credentials:
+      accessKeyId:
+        name: minio-backups-secret
+        key: user
+      secretAccessKey:
+        name: minio-backups-secret
+        key: password
+
+  cluster:
+    name: documentdb-cluster
+    instances: 1
+    image:
+      repository: "ghcr.io/ferretdb/postgres-documentdb"
+      tag: "17-0.106.0-ferretdb-2.5.0"
+      pullPolicy: IfNotPresent
+    superuserSecret:
+      name: documentdb-super-credentials
+    storage:
+      size: 5Gi
+
+    managed:
+      services:
+        disabledDefaultServices: ["ro", "r"]
+
+    # # To bootstrap a new database
+    bootstrap:
+      enabled: true
+      dbName: ferretdb
+      dbOwner: ferret
+      userSecret: documentdb-db-credentials
+      superuserSecret:
+        name: documentdb-super-credentials
+
+      recovery:
+        source: bootstrap-source-documentdb
+    # # # To restore from a backup
+    # #   source: minio-store-documentdb
+    # #   barmanObjectName: minio-store-documentdb
+
+    walArchive:
+      enabled: true
+      barmanObjectName: minio-store-documentdb
+
+    extraRoles: []
+      # example:
+      # - name: notes
+      #   ensure: present
+      #   comment: "OpenedX Application User"
+      #   login: true
+      #   createdb: true
+      #   createrole: false
+      #   replication: false
+      #   bypassrls: false
+      #   passwordSecret:
+      #     name: notes-db-credentials
+
+meilisearch:
+  enabled: true
+  environment:
+    MEILI_NO_ANALYTICS: true
+    # DO NOT CHANGE THE FOLLOWING LINE UNLESS YOU KNOW WHAT YOU ARE DOING!
+    MEILI_ENV: production
+  service:
+    type: ClusterIP
+    port: 7700
+  auth:
+    # DO NOT CHANGE THE FOLLOWING LINE UNLESS YOU KNOW WHAT YOU ARE DOING!
+    # The secret must contain the key: MEILI_MASTER_KEY
+    existingMasterKeySecret: "meili-master"
+
+  ingress:
+    enabled: false
+    className: "traefik"
+    annotations: {}
+    path: /
+    hosts:
+      - meilisearch.local.openedx.io
+    tls: []
+    #  - secretName: chart-example-tls
+    #    hosts:
+    #      - chart-example.local
+
+  persistence:
+    enabled: true
+    accessMode: ReadWriteOnce
+    # storageClass: ~
+    existingClaim: ""
+    size: 5Gi
+
+minio:
+  # see https://github.com/minio/operator/blob/master/helm/tenant/templates/tenant.yaml
+  enabled: true
+  tenant:
+    name: minio-storage
+    # image:
+    #   repository: quay.io/minio/minio
+    #   tag: RELEASE.2025-04-08T15-41-24Z
+    #   pullPolicy: IfNotPresent
+    exposeServices:
+      minio: false
+      console: false
+
+    # FIXME: these MUST be found and set properly elsewhere too!!!
+    buckets:
+      - name: openedx
+      - name: openedxuploads
+      - name: openedxgrades
+      - name: openedxprofiles
+
+    configSecret:
+      name: minio-env
+      existingSecret: true
+
+    certificate:
+      requestAutoCert: false
+
+    # pools:
+    #   - servers: 1
+    #     name: pool-0
+    #     volumesPerServer: 1
+    #     size: 5Gi
+
+  ingress:
+    api:
+      enabled: false
+      ingressClassName: ""
+      labels: { }
+      annotations: { }
+      tls: [ ]
+      host: minio.local.openedx.io
+      path: /
+      pathType: Prefix
+    console:
+      enabled: false
+      ingressClassName: ""
+      labels: { }
+      annotations: { }
+      tls: [ ]
+      host: minio-console.local.openedx.io
+      path: /
+      pathType: Prefix
+
+redis:
+  enabled: true
+  redisStandalone:
+    name: redis  # apparently MUST be set or it will default to the release name
+    tag: "v7.4.5"

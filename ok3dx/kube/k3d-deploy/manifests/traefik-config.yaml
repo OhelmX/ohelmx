@@ -1,0 +1,17 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    # certificatesResolvers:
+    #   le:
+    #     acme:
+    #       email: certs@local.openedx.io
+    #       storage: /data/acme.json  # Make sure this path is writable by Traefik and persists across restarts
+    #       httpChallenge:
+    #         entryPoint: web
+    providers:
+      kubernetesCRD:
+        allowExternalNameServices: true

@@ -1,0 +1,20 @@
+{{- if and .Values.openedx.enabled .Values.openedx.cms.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.openedx.cms.service.name | default "cms" }}
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+  labels:
+    {{- include "openedx.componentLabels" (dict "component" "cms" "root" .) | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+  - port: {{ .Values.openedx.cms.service.port | default 8000 }}
+    protocol: TCP
+    targetPort: {{ .Values.openedx.cms.application.port | default 8000 }}
+  selector:
+    {{- include "openedx.componentSelectorLabels" (dict "component" "cms" "root" .) | nindent 4 }}
+status:
+  loadBalancer: {}
+{{- end -}}

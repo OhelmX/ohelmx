@@ -1,0 +1,83 @@
+repositories:
+- name: minio-operator
+  url: https://operator.min.io/
+- name: meilisearch
+  url: https://meilisearch.github.io/meilisearch-kubernetes
+- name: ot-helm
+  url: https://ot-container-kit.github.io/helm-charts/
+
+releases:
+- name: cert-manager
+  namespace: cert-manager
+  chart: oci://quay.io/jetstack/charts/cert-manager
+  version: v1.18.2
+  wait: true
+  waitForJobs: true
+  set:
+  - name: crds.enabled
+    value: "true"
+- name: minio-operator
+  namespace: minio-operator
+  wait: true
+  waitForJobs: true
+  chart: minio-operator/operator
+  version: 7.1.1
+- name: redis-operator
+  namespace: ot-operators
+  wait: true
+  waitForJobs: true
+  chart: ot-helm/redis-operator
+  version: 0.22.1
+- name: argo
+  namespace: argo
+  chart: oci://ghcr.io/argoproj/argo-helm/argo-workflows
+  version: 0.45.26
+  set:
+  - name: workflow.serviceAccount.create
+    value: "true"
+  - name: workflow.rbac.create
+    value: "true"
+  - name: controller.workflowNamespaces[0] # Explicitly define the first list item
+    value: "openedx"
+- name: cnpg
+  namespace: cnpg-system
+  chart: oci://ghcr.io/cloudnative-pg/charts/cloudnative-pg
+  version: 0.26.0
+  wait: true
+  waitForJobs: true
+  needs:
+  - cert-manager/cert-manager
+  hooks:
+  - events: ["postsync"]
+    command: "kubectl"
+    args: ["apply", "-f", "https://github.com/cloudnative-pg/plugin-barman-cloud/releases/download/v0.7.0/manifest.yaml"]
+
+- name: minio-backups
+  namespace: backups
+  chart: minio-operator/tenant
+  version: 7.1.1
+  wait: true
+  waitForJobs: true
+  needs:
+  - minio-operator/minio-operator
+  values:
+  - ./backups.yaml
+
+- name: openedx-infra
+  needs:
+  - cert-manager/cert-manager
+  - minio-operator/minio-operator
+  - ot-operators/redis-operator
+  - argo/argo
+  - cnpg-system/cnpg
+  - backups/minio-backups
+  namespace: openedx
+  chart: ../../../charts/openedx-infra
+  version: 0.1.0
+  wait: true
+  waitForJobs: true
+  values:
+  - ./overrides-infra.yaml
+  {{- if isFile "overrides-infra-local.yaml" }}
+  - overrides-infra-local.yaml
+  {{- end }}

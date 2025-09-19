@@ -1,0 +1,113 @@
+{{- if and .Values.openedx.enabled .Values.openedx.cmsWorker.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cms-worker
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+  labels:
+    {{- include "openedx.componentLabels" (dict "component" "cms-worker" "root" .) | nindent 4 }}
+spec:
+  progressDeadlineSeconds: {{ .Values.openedx.cmsWorker.progressDeadlineSeconds | default 600 }}
+  replicas: {{ .Values.openedx.cmsWorker.replicas | default 1 }}
+  revisionHistoryLimit: {{ .Values.openedx.cmsWorker.revisionHistoryLimit | default 10 }}
+
+  selector:
+    matchLabels:
+      {{- include "openedx.componentSelectorLabels" (dict "component" "cms-worker" "root" .) | nindent 6 }}
+
+  {{- if .Values.openedx.cmsWorker.updateStrategy }}
+  strategy: {{- toYaml .Values.openedx.cmsWorker.updateStrategy | nindent 4 }}
+  {{- end }}
+
+  template:
+    metadata:
+      annotations:
+        {{- include "openedx.annotations" . | nindent 8 }}
+      labels:
+        {{- include "openedx.componentLabels" (dict "component" "cms-worker" "root" .) | nindent 8 }}
+    spec:
+      dnsPolicy: {{ .Values.openedx.cmsWorker.dnsPolicy | default "ClusterFirst" }}
+      restartPolicy: {{ .Values.openedx.cmsWorker.restartPolicy | default "Always" }}
+      schedulerName: {{ .Values.openedx.cmsWorker.schedulerName | default "default-scheduler" }}
+
+      securityContext:
+        runAsGroup: 1000
+        runAsUser: 1000
+
+      terminationGracePeriodSeconds: {{ .Values.openedx.cmsWorker.terminationGracePeriodSeconds | default 30 }}
+
+      containers:
+      - name: {{ .Values.openedx.cmsWorker.name | default "cms-worker" }}
+        image: {{ include "openedx.image" (dict "component" "cms" "root" .) }}
+        imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "cms" "root" .) }}
+
+        {{- if dig "diagnosticMode" "enabled" false .Values.openedx.cmsWorker }}
+        command: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cmsWorker.diagnosticMode.command "context" $) | nindent 10 }}
+        {{- else if .Values.openedx.cmsWorker.command }}
+        command: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cmsWorker.command "context" $) | nindent 10 }}
+        {{- end }}
+
+        {{- if dig "diagnosticMode" "enabled" false .Values.openedx.cmsWorker }}
+        args: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cmsWorker.diagnosticMode.args "context" $) | nindent 10 }}
+        {{- else if .Values.openedx.cmsWorker.args }}
+        args: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cmsWorker.args "context" $) | nindent 11 }}
+        {{- else }}
+        args:
+        - celery
+        - --app=cms.celery
+        - worker
+        - --loglevel=info
+        - --hostname=edx.cms.core.default.%h
+        - --queues=edx.cms.core.default,edx.cms.core.high,edx.cms.core.low
+        - --max-tasks-per-child=100
+        - --prefetch-multiplier=1
+        - --without-gossip
+        - --without-mingle
+        {{- end }}
+
+        {{- if .Values.openedx.cmsWorker.resources }}
+        resources: {{- toYaml .Values.openedx.cmsWorker.resources | nindent 12 }}
+        {{- end }}
+
+        terminationMessagePath: {{ .Values.openedx.cmsWorker.terminationMessagePath | default "/dev/termination-log" }}
+        terminationMessagePolicy: {{ .Values.openedx.cmsWorker.terminationMessagePolicy | default "File" }}
+
+        securityContext:
+          allowPrivilegeEscalation: false
+
+        env:
+        - name: SERVICE_VARIANT
+          value: cms
+        - name: DJANGO_SETTINGS_MODULE
+          value: cms.envs.tutor.production
+        - name: SITE_ID
+          value: {{ .Values.openedx.cms.siteId | quote }}
+
+        {{- include "openedx.common.env" . | nindent 8 }}
+        {{- include "openedx.cms.env" . | nindent 8 }}
+
+        {{- if .Values.openedx.cmsWorker.extraEnvVars }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cmsWorker.extraEnvVars "context" $) | nindent 8 }}
+        {{- end }}
+
+        volumeMounts:
+        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
+        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
+
+        {{- if .Values.openedx.cmsWorker.extraVolumeMounts }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cmsWorker.extraVolumeMounts "context" $) | nindent 8 }}
+        {{- end }}
+
+        {{- if .Values.openedx.cmsWorker.sidecars }}
+        {{- include "common.tplvalues.render" ( dict "value" .Values.openedx.cmsWorker.sidecars "context" $) | nindent 8 }}
+        {{- end }}
+
+      volumes:
+      {{- include "openedx.common.volumes" . | nindent 6 }}
+      {{- include "openedx.dev.volumes" . | nindent 6 }}
+      {{- if .Values.openedx.cmsWorker.extraVolumes }}
+      {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cmsWorker.extraVolumes "context" $) | nindent 6 }}
+      {{- end }}
+
+{{- end -}}

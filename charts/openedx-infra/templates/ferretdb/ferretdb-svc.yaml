@@ -1,0 +1,19 @@
+{{- if .Values.ferretdb.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.ferretdb.service.name }}
+  annotations:
+    {{- include "openedxinfra.annotations" . | nindent 4 }}
+  labels:
+    {{- include "openedxinfra.componentLabels" (dict "component" "ferretdb" "root" .) | nindent 4 }}
+spec:
+  type: {{ .Values.ferretdb.service.type | default "ClusterIP" }}
+  selector:
+    {{- include "openedxinfra.componentSelectorLabels" (dict "component" "ferretdb" "root" .) | nindent 4 }}
+
+  ports:
+    - protocol: TCP
+      port: {{ .Values.ferretdb.service.port }}
+      targetPort: {{ .Values.ferretdb.application.port }}
+{{- end }}

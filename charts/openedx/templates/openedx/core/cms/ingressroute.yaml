@@ -1,0 +1,65 @@
+{{- if and .Values.openedx.traefik.enabled .Values.openedx.cms.enabled -}}
+{{- $host := .Values.openedx.cms.host }}
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: cms-ingressroute
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+  labels:
+    {{- include "openedx.componentLabels" (dict "component" "cms" "root" .) | nindent 4 }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+{{- range .Values.openedx.cms.localRoutes }}
+    - match: Host(`{{ .host | default $host }}`) && PathPrefix(`{{ .path }}`)
+      kind: Rule
+      middlewares:
+        - name: add-headers
+        - name: compress-gzip
+{{- if .suppressPath }}
+        - name: stripprefix-cms-{{ .name }}
+{{- end }}
+      services:
+        - name: external-cms-{{ .name }}
+          port: {{ .port }}
+{{- end }}
+    - match: Host(`{{ $host }}`)
+      kind: Rule
+      middlewares:
+        - name: favicon-rewrite-studio
+        - name: studio-body-limit
+        - name: add-headers
+        - name: compress-gzip
+      services:
+      - name: {{ .Values.openedx.cms.service.name | default "cms" }}
+        port: {{ .Values.openedx.cms.service.port | default 8000 }}
+  tls:
+    {{- include "openedx.ingressroute.tlsname" (dict "component" "cms" "root" .) | nindent 4 }}
+---
+{{- include "openedx.ingressroute.tlscertificate" (dict "component" "cms" "root" .) }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: favicon-rewrite-studio
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+spec:
+  replacePathRegex:
+    regex: ^/favicon\.ico$
+    replacement: /theming/asset/images/favicon.ico
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: studio-body-limit
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+spec:
+  buffering:
+    maxRequestBodyBytes: {{ .Values.openedx.cms.ingress.maxRequestBodyBytes | default 262144000 }}  # 250MB
+    memRequestBodyBytes: {{ .Values.openedx.cms.ingress.memRequestBodyBytes | default 262144000 }}
+    maxResponseBodyBytes: {{ .Values.openedx.cms.ingress.maxResponseBodyBytes | default 0 }}
+{{- end -}}

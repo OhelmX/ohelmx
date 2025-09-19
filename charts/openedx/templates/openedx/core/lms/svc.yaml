@@ -1,0 +1,20 @@
+{{- if and .Values.openedx.enabled .Values.openedx.lms.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.openedx.lms.service.name | default "lms" }}
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+  labels:
+    {{- include "openedx.componentLabels" (dict "component" "lms" "root" .) | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+  - port: {{ .Values.openedx.lms.service.port | default 8000 }}
+    protocol: TCP
+    targetPort: {{ .Values.openedx.lms.application.port | default 8000 }}
+  selector:
+    {{- include "openedx.componentSelectorLabels" (dict "component" "lms" "root" .) | nindent 4 }}
+status:
+  loadBalancer: {}
+{{- end -}}
