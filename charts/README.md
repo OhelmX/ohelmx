@@ -1,4 +1,4 @@
-# OhelmX
+# OhelmX charts
 
 Charts for installing Open edX and dependencies
 
