@@ -83,6 +83,7 @@ Init your workstation setup:
 ```
 cp --update vars.sh.default vars.sh
 touch kube/k3d-deploy/{overrides-local.yaml,overrides-infra-local.yaml}
+mkdir -p ~/bin
 ```
 
 These files are NOT managed by git and are included in the various scripts to store environment variables and then values overrides for the two main helm charts.
@@ -129,13 +130,17 @@ Show init progress - requires `argo`, see below:
 argo logs -f @latest
 ```
 
-### Admin
+### Access the services
+
+When it has finished (see the argo logs above, or there are no longer init pods running), all pods should be `Running` or `Completed`.
 
 Create a superuser:
 
 ```
 bash kube/k3d-deploy/openedx-create-user.sh USERNAME USER_EMAIL
 ```
+
+You should now be able to access the sites on their normal dev-local URLs - https://local.openedx.io, https://studio.local.openedx.io, etc., and to log in with the (super)user you just created.
 
 ## Dev development
 
