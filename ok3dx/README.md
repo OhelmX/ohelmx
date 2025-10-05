@@ -78,6 +78,8 @@ The system also relies on the following services, currently installed with `k3d`
 
 ## Dev deployment
 
+[!NOTE] all commands should be executed from the directory that contains the `vars.sh.default` file (should be the same as this `README`)
+
 Init your workstation setup:
 
 ```
@@ -86,9 +88,9 @@ touch kube/k3d-deploy/{overrides-local.yaml,overrides-infra-local.yaml}
 mkdir -p ~/bin
 ```
 
-These files are NOT managed by git and are included in the various scripts to store environment variables and then values overrides for the two main helm charts.
+These files are NOT managed by git and are included in the various scripts to store environment variables and values overrides for the two main helm charts.
 
-If your personalisation needs are more substantial, you could copy this repo's `ok3dx` (root level dir) and adapt outside of this repo. Don't hesitate to submit PRs if you think others might benefit!
+If your personalisation needs are more substantial, you could copy this repo's `ok3dx` (root level dir) and adapt outside of this repo. Don't hesitate to submit PRs if you think others might benefit from your changes!
 
 ### Cluster init
 
@@ -127,12 +129,13 @@ bash kube/k3d-deploy/openedx-init.sh
 Show init progress - requires `argo`, see below:
 
 ```
+source vars.sh
 argo logs -f @latest
 ```
 
 ### Access the services
 
-When it has finished (see the argo logs above, or there are no longer init pods running), all pods should be `Running` or `Completed`.
+When it has finished (see the argo logs above, or there are no longer init pods running), all non-init pods should be `Running` and init pods `Completed`.
 
 Create a superuser:
 
