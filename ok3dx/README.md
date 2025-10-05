@@ -45,6 +45,8 @@ This setup has been tested on Ubuntu 24.04 and should work seamlessly on similar
 
 A full local setup including all servers (DBs, Meilisearch, etc.) will require 6GB+ of RAM and a reasonably recent/powerful processor (laptop 2020+, desktop 2018+).
 
+You also _need_ ports `80` and `443` free and usable when running `ok3dx` and, if you want easy, direct access to the servers (dbs, redis, etc.) then ports 30432-30437 (these can also be changed within Kuberentes "nodeport range" but require modifying the scripts) should also be free.
+
 ## Installation
 
 ### Components
@@ -82,10 +84,10 @@ The system also relies on the following services, currently installed with `k3d`
 
 Init your workstation setup:
 
-```
-cp --update vars.sh.default vars.sh
-touch kube/k3d-deploy/{overrides-local.yaml,overrides-infra-local.yaml}
-mkdir -p ~/bin
+```bash
+git clone https://github.com/OhelmX/ohelmx.git && cd ohelmx
+# or git@github.com:OhelmX/ohelmx.git
+cp --update vars.sh.default vars.sh && touch kube/k3d-deploy/{overrides-local.yaml,overrides-infra-local.yaml} && mkdir -p ~/bin
 ```
 
 These files are NOT managed by git and are included in the various scripts to store environment variables and values overrides for the two main helm charts.
@@ -94,13 +96,13 @@ If your personalisation needs are more substantial, you could copy this repo's `
 
 ### Cluster init
 
-```
+```bash
 bash kube/k3d-deploy/k3d-create-cluster.sh && bash kube/k3d-deploy/kubectl-create-secret.sh
 ```
 
 ### Cluster operator and infra provisioning
 
-```
+```bash
 bash kube/k3d-deploy/pre-install.sh
 ```
 
@@ -114,7 +116,7 @@ bash kube/k3d-deploy/openedx-infra-install.sh
 
 ### Install openedx
 
-```
+```bash
 bash kube/k3d-deploy/openedx-install.sh
 ```
 
@@ -122,13 +124,13 @@ bash kube/k3d-deploy/openedx-install.sh
 
 [!NOTE] The following can take 20+ minutes, but is only required once.
 
-```
+```bash
 bash kube/k3d-deploy/openedx-init.sh
 ```
 
 Show init progress - requires `argo`, see below:
 
-```
+```bash
 source vars.sh
 argo logs -f @latest
 ```
@@ -139,18 +141,31 @@ When it has finished (see the argo logs above, or there are no longer init pods 
 
 Create a superuser:
 
-```
+```bash
 bash kube/k3d-deploy/openedx-create-user.sh USERNAME USER_EMAIL
 ```
 
 You should now be able to access the sites on their normal dev-local URLs - https://local.openedx.io, https://studio.local.openedx.io, etc., and to log in with the (super)user you just created.
+
+
+### Launch realtime backups baselines
+
+[!NOTE] requires the `cnpg` kubectl plugin, see below:
+
+```bash
+source vars.sh
+kubectl cnpg backup db-cluster --method plugin --plugin-name barman-cloud.cloudnative-pg.io
+kubectl cnpg backup documentdb-cluster --method plugin --plugin-name barman-cloud.cloudnative-pg.io
+```
+
+Alternatively, the default settings launch nighly backups - the next one will serve as the first baseline if you don't launch these now.
 
 ## Dev development
 
 Unless you change the default settings, if you set `openedx.isDev: true`:
 
 
-```
+```yaml
 # e.g, in overrides-local.yaml
 openedx:
   isDev: true
@@ -184,7 +199,7 @@ If you are not comfortable with Helm (or at least want to be), you should probab
 
 #### argo cli
 
-```
+```bash
 ARGO_OS="linux"
 curl -sLO "https://github.com/argoproj/argo-workflows/releases/download/v3.7.2/argo-$ARGO_OS-amd64.gz"
 gunzip "argo-$ARGO_OS-amd64.gz"
@@ -194,7 +209,7 @@ mv "./argo-$ARGO_OS-amd64" ~/bin/argo
 
 #### kubectl cnpg plugin
 
-```
+```bash
 wget https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.27.0/kubectl-cnpg_1.27.0_linux_x86_64.deb
 sudo apt install ./kubectl-cnpg_1.27.0_linux_x86_64.deb
 rm kubectl-cnpg_1.27.0_linux_x86_64.deb

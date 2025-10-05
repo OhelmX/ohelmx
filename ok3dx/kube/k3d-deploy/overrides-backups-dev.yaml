@@ -1,11 +1,3 @@
-global:
-  isDev: false
-
-project:
-  local:
-    enabled: false
-    enableNodePorts: false
-
 minio:
   tenant:
     pools:
@@ -13,16 +5,17 @@ minio:
         name: pool-0
         volumesPerServer: 1
         size: 5Gi
+
   ingress:
     api:
       enabled: true
       ingressClassName: "traefik"
-      host: minio.local.openedx.io
+      host: backups.local.openedx.io
       path: /
       pathType: Prefix
     console:
       enabled: true
       ingressClassName: "traefik"
-      host: minio-console.local.openedx.io
+      host: backups-console.local.openedx.io
       path: /
       pathType: Prefix

@@ -1,0 +1,40 @@
+tenant:
+  name: minio-backups
+  exposeServices:
+    minio: false
+    console: false
+
+  # FIXME: these MUST be found and set properly elsewhere too!!!
+  buckets:
+    - name: openedx-storage
+    - name: db-backups
+    - name: documentdb-backups
+
+  configSecret:
+    name: minio-env
+    existingSecret: true
+
+  certificate:
+    requestAutoCert: false
+
+# Add the following to `overrides-backups-local.yaml` if you want to override the pool settings from the main infra file
+  # pools:
+  #   - servers: 1
+  #     name: pool-0
+  #     volumesPerServer: 1
+  #     size: 5Gi
+
+# Add the following to `overrides-backups-local.yaml` if you want ingress for minio backups
+# ingress:
+#   api:
+#     enabled: true
+#     ingressClassName: "traefik"
+#     host: backups.local.openedx.io
+#     path: /
+#     pathType: Prefix
+#   console:
+#     enabled: true
+#     ingressClassName: "traefik"
+#     host: backups-console.local.openedx.io
+#     path: /
+#     pathType: Prefix

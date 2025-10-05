@@ -22,7 +22,7 @@ spec:
   enableSuperuserAccess: true
 
   superuserSecret:
-    name: {{ .Values.ferretdb.cluster.superuserSecret.name | default "documentdb-super-credentials" }}
+    name: {{ .Values.ferretdb.cluster.superuser.credentials | default "documentdb-super-credentials" }}
 
   bootstrap:
   {{- if .Values.ferretdb.cluster.bootstrap.source }}
@@ -34,13 +34,13 @@ spec:
     plugin:
       name: barman-cloud.cloudnative-pg.io
       parameters:
-        barmanObjectName: {{ .Values.ferretdb.cluster.bootstrap.recovery.barmanObjectName | default "minio-store-documentdb" }}
+        barmanObjectName: {{ .Values.ferretdb.cluster.bootstrap.recovery.barmanObjectName | default "s3-store-documentdb" }}
   {{- else }}
     initdb:
       database: {{ .Values.ferretdb.cluster.bootstrap.dbName | default "ferretdb" }}
       owner: {{ .Values.ferretdb.cluster.bootstrap.dbOwner | default "ferret" }}
       secret:
-        name: {{ .Values.ferretdb.cluster.bootstrap.userSecret | default "documentdb-db-credentials" }}
+        name: {{ .Values.ferretdb.cluster.user.credentials | default "documentdb-db-credentials" }}
       postInitApplicationSQL:
         - 'CREATE EXTENSION IF NOT EXISTS documentdb CASCADE;'
         - 'CREATE EXTENSION IF NOT EXISTS pg_cron;'
@@ -52,7 +52,7 @@ spec:
   - name: barman-cloud.cloudnative-pg.io
     isWALArchiver: true
     parameters:
-      barmanObjectName: {{ .Values.ferretdb.cluster.walArchive.barmanObjectName | default "minio-store-documentdb" }}
+      barmanObjectName: {{ .Values.ferretdb.cluster.walArchive.barmanObjectName | default "s3-store-documentdb" }}
   {{- end }}
 
   {{- if or .Values.ferretdb.cluster.managed.services .Values.ferretdb.cluster.extraRoles }}

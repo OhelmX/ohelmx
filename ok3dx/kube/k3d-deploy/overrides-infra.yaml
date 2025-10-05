@@ -15,10 +15,12 @@ db:
 meilisearch:
   fullnameOverride: meilisearch
 
-minio:
-  tenant:
-    pools:
-      - servers: 1
-        name: pool-0
-        volumesPerServer: 1
-        size: 5Gi
+# Add the following to `overrides-infra-local.yaml` if you want to override the pool settings from the main infra file
+
+# minio:
+#   tenant:
+#     pools:
+#       - servers: 1
+#         name: pool-0
+#         volumesPerServer: 1
+#         size: 5Gi

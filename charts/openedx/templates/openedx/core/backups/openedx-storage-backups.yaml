@@ -1,0 +1,135 @@
+{{- if and .Values.openedx.enabled .Values.openedx.backups.media.enabled -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openedx-media-backup
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+  labels:
+    {{- include "openedx.componentLabels" (dict "component" "backups" "root" .) | nindent 4 }}
+
+spec:
+  {{- if .Values.openedx.backups.media.strategy }}
+  strategy:
+{{ toYaml .Values.openedx.backups.media.strategy | indent 4 }}
+  {{- end }}
+  # TODO: must this be one?
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "openedx.componentSelectorLabels" (dict "component" "backups" "root" .) | nindent 6 }}
+
+  template:
+    metadata:
+      annotations:
+        {{- include "openedx.annotations" . | nindent 8 }}
+      labels:
+        {{- include "openedx.componentLabels" (dict "component" "backups" "root" .) | nindent 8 }}
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: mc-mirror
+          image: {{ include "openedx.image" (dict "component" "backups" "root" .) }}
+          imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "backups" "root" .) }}
+
+          env:
+            - name: S3_ACCESS_KEY_DESTINATION
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.openedx.backups.media.destination.accessKey.secretName }}
+                  key: {{ .Values.openedx.backups.media.destination.accessKey.secretKey }}
+            - name: S3_SECRET_KEY_DESTINATION
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.openedx.backups.media.destination.secretKey.secretName }}
+                  key: {{ .Values.openedx.backups.media.destination.secretKey.secretKey }}
+
+            - name: S3_ACCESS_KEY_SOURCE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.openedx.s3.accessKey.secretName }}
+                  key: {{ .Values.openedx.s3.accessKey.secretKey }}
+            - name: S3_SECRET_KEY_SOURCE
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.openedx.s3.secretKey.secretName }}
+                  key: {{ .Values.openedx.s3.secretKey.secretKey }}
+
+            # mc needs a writable config directory; default ($HOME/.mc) is not writable with readOnlyRootFilesystem.
+            - name: MC_CONFIG_DIR
+              value: /mc-config
+          # Optionally tune resources
+          # resources:
+          #   requests:
+          #     cpu: 50m
+          #     memory: 64Mi
+          #   limits:
+          #     cpu: 300m
+          #     memory: 256Mi
+          command: ["/bin/sh","-c"]
+          args:
+            - |
+              set -euo pipefail
+
+              mkdir -p "${MC_CONFIG_DIR}" || true
+              echo "Using MC_CONFIG_DIR=${MC_CONFIG_DIR}";
+
+              echo "Configuring aliases..."
+              mc alias set s3-source {{ printf "%s://%s:%v" (ternary "https" "http" .Values.openedx.s3.useSSL) .Values.openedx.s3.host (.Values.openedx.s3.port | int) | quote }} "$S3_ACCESS_KEY_SOURCE" "$S3_SECRET_KEY_SOURCE"
+              mc alias set s3-dest {{ printf "%s://%s:%v" (ternary "https" "http" .Values.openedx.backups.media.destination.useSSL) .Values.openedx.backups.media.destination.host (.Values.openedx.backups.media.destination.port | int) | quote }} "$S3_ACCESS_KEY_DESTINATION" "$S3_SECRET_KEY_DESTINATION"
+
+              # Destination bucket path
+              DEST_BUCKET="s3-dest/{{ required "openedx.backups.media.destination.bucketName is required" .Values.openedx.backups.media.destination.bucketName }}"
+              # Source path (bucket or prefix)
+              SRC_PATH="s3-source/{{ dig "source" "bucketName" "" .Values.openedx.backups.media }}"
+
+              echo "Ensuring destination bucket exists..."
+              if ! mc ls "${DEST_BUCKET}" >/dev/null 2>&1; then
+                # mc mb returns non‑zero if exists; allow race / already-created
+                mc mb "${DEST_BUCKET}" || echo "Bucket already exists or created by another instance."
+              fi
+
+              # (Optional) ensure source bucket exists (uncomment if needed)
+              # if ! mc ls "${SRC_PATH}" >/dev/null 2>&1; then
+              #   mc mb "${SRC_PATH}" || true
+              # fi
+
+              echo "Starting continuous mirror (watch mode)..."
+              # --overwrite ensures updated objects replace older versions
+              exec mc mirror \
+                --watch \
+                --overwrite \
+                --preserve \
+                "${SRC_PATH}" "${DEST_BUCKET}"
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - mc ls s3-source/{{ dig "source" "bucketName" "" .Values.openedx.backups.media }} >/dev/null 2>&1
+            initialDelaySeconds: 30
+            periodSeconds: 60
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - mc ls s3-dest/{{ required "openedx.backups.media.destination.bucketName is required" .Values.openedx.backups.media.destination.bucketName }} >/dev/null 2>&1
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: mc-config
+              mountPath: /mc-config
+      securityContext:
+        fsGroup: 1000
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: mc-config
+          emptyDir: {}
+
+{{- end }}

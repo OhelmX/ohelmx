@@ -19,9 +19,9 @@ And other services:
 - oci://quay.io/jetstack/charts/cert-manager
 - oci://ghcr.io/argoproj/argo-helm/argo-workflows
 
-During the pre-alpha phase, you will need to look closely at the companion repo [`Ok3dX`](https://github.com/AntonOfTheWoods/ok3dx) for configuration examples and further documentation. `Ok3dX` is meant to provide a set of scripts and example configurations so you can get operational locally developing and deploying Open edX - all using these charts.
+During the pre-alpha phase, you will need to look closely at the companion project `Ok3dX` in this repo for configuration examples and further documentation. `Ok3dX` is meant to provide a set of scripts and example configurations so you can get operational locally developing and deploying Open edX - all using these charts.
 
-You should look particularly at [this helmfile.yaml](https://github.com/AntonOfTheWoods/ok3dx/blob/main/kube/k3d-deploy/helmfile.yaml), which contains all the pre-requisites required for getting both these charts running.
+You should look particularly at [this helmfile.yaml](https://github.com/OhelmX/ohelmx/blob/main/ok3dx/kube/k3d-deploy/helmfile.yaml.gotmpl), which contains all the pre-requisites required for getting both these charts running.
 
 [!NOTE] PRs and wishlists are welcome!
 

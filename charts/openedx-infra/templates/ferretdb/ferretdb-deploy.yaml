@@ -34,12 +34,12 @@ spec:
             - name: PGUSER
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.ferretdb.cluster.userSecret | default "documentdb-db-credentials" }}
+                  name: {{ .Values.ferretdb.cluster.credentials | default "documentdb-db-credentials" }}
                   key: username
             - name: PGPASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.ferretdb.cluster.userSecret | default "documentdb-db-credentials" }}
+                  name: {{ .Values.ferretdb.cluster.credentials | default "documentdb-db-credentials" }}
                   key: password
             - name: PGDATABASE
               value: "{{ .Values.ferretdb.cluster.bootstrap.dbName | default "ferretdb" }}"

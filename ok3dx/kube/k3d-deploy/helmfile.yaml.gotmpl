@@ -5,6 +5,8 @@ repositories:
   url: https://meilisearch.github.io/meilisearch-kubernetes
 - name: ot-helm
   url: https://ot-container-kit.github.io/helm-charts/
+- name: minio-operator-ext
+  url: https://benfiola.github.io/minio-operator-ext/charts
 
 releases:
 - name: cert-manager
@@ -22,6 +24,20 @@ releases:
   waitForJobs: true
   chart: minio-operator/operator
   version: 7.1.1
+- name: minio-operator-ext-crds
+  namespace: minio-operator
+  wait: true
+  waitForJobs: true
+  chart: minio-operator-ext/crds
+  version: 3.2.0-rc.2
+- name: minio-operator-ext-operator
+  namespace: minio-operator
+  wait: true
+  waitForJobs: true
+  needs:
+  - minio-operator/minio-operator-ext-crds
+  chart: minio-operator-ext/operator
+  version: 3.2.0-rc.2
 - name: redis-operator
   namespace: ot-operators
   wait: true
@@ -54,19 +70,28 @@ releases:
 
 - name: minio-backups
   namespace: backups
-  chart: minio-operator/tenant
-  version: 7.1.1
+  # chart: minio-operator/tenant
+  chart: ../../../charts/openedx-backups
+  version: 0.1.0
   wait: true
   waitForJobs: true
   needs:
   - minio-operator/minio-operator
+  - minio-operator/minio-operator-ext-crds
+  - minio-operator/minio-operator-ext-operator
   values:
-  - ./backups.yaml
+  - ./overrides-backups.yaml
+  - ./overrides-backups-dev.yaml
+  {{- if isFile "overrides-backups-local.yaml" }}
+  - ./overrides-backups-local.yaml
+  {{- end }}
 
 - name: openedx-infra
   needs:
   - cert-manager/cert-manager
   - minio-operator/minio-operator
+  - minio-operator/minio-operator-ext-crds
+  - minio-operator/minio-operator-ext-operator
   - ot-operators/redis-operator
   - argo/argo
   - cnpg-system/cnpg
@@ -78,6 +103,7 @@ releases:
   waitForJobs: true
   values:
   - ./overrides-infra.yaml
+  - ./overrides-infra-dev.yaml
   {{- if isFile "overrides-infra-local.yaml" }}
-  - overrides-infra-local.yaml
+  - ./overrides-infra-local.yaml
   {{- end }}

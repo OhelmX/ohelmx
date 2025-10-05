@@ -1,0 +1,45 @@
+{{- if and .Values.minio.enabled .Values.minio.extendedOperator.user -}}
+apiVersion: bfiola.dev/v1
+kind: MinioPolicy
+metadata:
+  name: {{ .Values.minio.extendedOperator.user.name }}-buckets-policy
+spec:
+  name: {{ .Values.minio.extendedOperator.user.name }}-buckets-policy
+  statement:
+    - effect: "Allow"
+      action:
+        - "s3:AbortMultipartUpload"
+        - "s3:DeleteObject"
+        - "s3:ListMultipartUploadParts"
+        - "s3:PutObject"
+        - "s3:GetObject"
+        - "s3:ListBucket"
+        - "s3:GetBucketLocation"
+      resource:
+{{- range .Values.minio.extendedOperator.buckets }}
+        - "arn:aws:s3:::{{ .name }}/*"
+{{- end }}
+    - effect: "Allow"
+      action:
+        - "s3:GetBucketLocation"
+        - "s3:ListBucket"
+        - "s3:ListBucketMultipartUploads"
+        - "s3:ListenBucketNotification"
+      resource:
+{{- range .Values.minio.extendedOperator.buckets }}
+        - "arn:aws:s3:::{{ .name }}"
+{{- end }}
+
+    # this is required for mirroring buckets with `--watch` at the root level
+    - effect: "Allow"
+      action:
+        - "s3:ListAllMyBuckets"
+        - "s3:ListenNotification"
+      resource:
+        - "*"
+
+  tenantRef:
+    namespace: {{ .Release.Namespace }}
+    name: {{ .Values.minio.tenant.name }}
+  version: "2012-10-17"
+{{- end -}}

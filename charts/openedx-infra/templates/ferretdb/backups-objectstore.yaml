@@ -2,7 +2,7 @@
 apiVersion: barmancloud.cnpg.io/v1
 kind: ObjectStore
 metadata:
-  name: {{ .Values.ferretdb.backups.barmanObjectName | default "minio-store-documentdb" }}
+  name: {{ .Values.ferretdb.backups.barmanObjectName | default "s3-store-documentdb" }}
   annotations:
     {{- include "openedxinfra.annotations" . | nindent 4 }}
   labels:
@@ -11,13 +11,13 @@ spec:
   retentionPolicy: {{ .Values.ferretdb.backups.retention | default "7d" | quote }}
   configuration:
     destinationPath: s3://{{ .Values.ferretdb.backups.destinationPath | default "documentdb-backups" }}
-    endpointURL: {{ .Values.ferretdb.backups.endpointURL | default "http://minio.backups.svc.cluster.local" }}
+    endpointURL: {{ .Values.ferretdb.backups.endpointURL | default "http://minio-backups-hl.backups.svc.cluster.local:9000" }}
     s3Credentials:
       accessKeyId:
-        name: {{ .Values.ferretdb.backups.s3Credentials.accessKeyId.name | default "minio-backups-secret" }}
-        key: {{ .Values.ferretdb.backups.s3Credentials.accessKeyId.key | default "user" }}
+        name: {{ .Values.ferretdb.backups.s3Credentials.accessKeyId.name | default "s3-backups" }}
+        key: {{ .Values.ferretdb.backups.s3Credentials.accessKeyId.key | default "username" }}
       secretAccessKey:
-        name: {{ .Values.ferretdb.backups.s3Credentials.secretAccessKey.name | default "minio-backups-secret" }}
+        name: {{ .Values.ferretdb.backups.s3Credentials.secretAccessKey.name | default "s3-backups" }}
         key: {{ .Values.ferretdb.backups.s3Credentials.secretAccessKey.key | default "password" }}
     wal:
       # bzip2;gzip;lz4;snappy;xz;zstd

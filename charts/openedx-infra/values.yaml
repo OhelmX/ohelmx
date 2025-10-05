@@ -27,17 +27,17 @@ db:
     enabled: true
     schedule: "0 30 2 * * *"  # At 02:30:00 (UTC) every day
     retention: 7d          # keep 7 backups
-    barmanObjectName: minio-store-db
+    barmanObjectName: s3-store-db
     destinationPath: "db-backups"
-    endpointURL: "http://minio.backups.svc.cluster.local"
+    endpointURL: "http://minio-backups-hl.backups.svc.cluster.local:9000"
     walCompression: bzip2  # bzip2;gzip;lz4;snappy;xz;zstd
     dataCompression: bzip2  # bzip2;gzip;snappy
     s3Credentials:
       accessKeyId:
-        name: minio-backups-secret
-        key: user
+        name: s3-backups
+        key: username
       secretAccessKey:
-        name: minio-backups-secret
+        name: s3-backups
         key: password
 
   cluster:
@@ -47,8 +47,10 @@ db:
       repository: "ghcr.io/cloudnative-pg/postgresql"
       tag: "18-standard-trixie"
       pullPolicy: IfNotPresent
-    superuserSecret:
-      name: db-super-credentials
+    superuser:
+      credentials: db-super-credentials
+    user:
+      credentials: openedx-db-credentials
     storage:
       size: 5Gi
 
@@ -60,16 +62,14 @@ db:
     bootstrap:
       enabled: true
       dbName: openedx
-      userSecret: openedx-db-credentials
-      superuserSecret:
-        name: db-super-credentials
+      dbOwner: openedx
     # # To restore from a backup
     #   source: bootstrap-source-db
-    #   barmanObjectName: minio-store-db
+    #   barmanObjectName: s3-store-db
 
     walArchive:
       enabled: true
-      barmanObjectName: minio-store-db
+      barmanObjectName: s3-store-db
 
     extraRoles: []
       # example:
@@ -101,17 +101,17 @@ ferretdb:
     enabled: true
     schedule: "0 0 2 * * *"  # At 02:00:00 (UTC) every day
     retention: "7d"           # keep 7 backups
-    barmanObjectName: minio-store-documentdb
+    barmanObjectName: s3-store-documentdb
     destinationPath: "documentdb-backups"
-    endpointURL: "http://minio.backups.svc.cluster.local"
+    endpointURL: "http://minio-backups-hl.backups.svc.cluster.local:9000"
     walCompression: bzip2  # bzip2;gzip;lz4;snappy;xz;zstd
     dataCompression: bzip2  # bzip2;gzip;snappy
     s3Credentials:
       accessKeyId:
-        name: minio-backups-secret
-        key: user
+        name: s3-backups
+        key: username
       secretAccessKey:
-        name: minio-backups-secret
+        name: s3-backups
         key: password
 
   cluster:
@@ -121,8 +121,11 @@ ferretdb:
       repository: "ghcr.io/ferretdb/postgres-documentdb"
       tag: "17-0.106.0-ferretdb-2.5.0"
       pullPolicy: IfNotPresent
-    superuserSecret:
-      name: documentdb-super-credentials
+    superuser:
+      credentials: documentdb-super-credentials
+    user:
+      credentials: documentdb-db-credentials
+
     storage:
       size: 5Gi
 
@@ -135,19 +138,16 @@ ferretdb:
       enabled: true
       dbName: ferretdb
       dbOwner: ferret
-      userSecret: documentdb-db-credentials
-      superuserSecret:
-        name: documentdb-super-credentials
 
       recovery:
         source: bootstrap-source-documentdb
     # # # To restore from a backup
-    # #   source: minio-store-documentdb
-    # #   barmanObjectName: minio-store-documentdb
+    # #   source: s3-store-documentdb
+    # #   barmanObjectName: s3-store-documentdb
 
     walArchive:
       enabled: true
-      barmanObjectName: minio-store-documentdb
+      barmanObjectName: s3-store-documentdb
 
     extraRoles: []
       # example:
@@ -196,24 +196,36 @@ meilisearch:
     size: 5Gi
 
 minio:
-  # see https://github.com/minio/operator/blob/master/helm/tenant/templates/tenant.yaml
   enabled: true
+
+  extendedOperator:
+    # Set this to create a user for OpenedX to use for storage
+    # The secret with this name must exist and contain keys `secretKey`
+    # You can use the provided `ok3dx/kube/k3d-deploy/secrets/openedx-infra/s3-storage.json` to create such a secret
+    user:
+      name: s3-storage
+      secretName: s3-storage
+      secretKeyName: password
+
+    buckets:
+      - name: openedx
+        versioning: true
+      - name: openedxuploads
+        versioning: true
+      - name: openedxgrades
+        versioning: true
+      - name: openedxprofiles
+        versioning: true
+
+  # see https://github.com/minio/operator/blob/master/helm/tenant/templates/tenant.yaml
   tenant:
     name: minio-storage
-    # image:
-    #   repository: quay.io/minio/minio
-    #   tag: RELEASE.2025-04-08T15-41-24Z
-    #   pullPolicy: IfNotPresent
     exposeServices:
       minio: false
       console: false
 
-    # FIXME: these MUST be found and set properly elsewhere too!!!
-    buckets:
-      - name: openedx
-      - name: openedxuploads
-      - name: openedxgrades
-      - name: openedxprofiles
+    # DO NOT SET BUCKETS HERE! They are NOT managed by this operator - see extendedOperator above!
+    # buckets: []
 
     configSecret:
       name: minio-env

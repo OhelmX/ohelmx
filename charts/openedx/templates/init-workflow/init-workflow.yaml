@@ -194,14 +194,14 @@ spec:
         - name: MEILISEARCH_MASTER_KEY  # name of env var
           valueFrom:
             secretKeyRef:
-              name: meili-master     # name of an existing k8s secret
-              key: MEILI_MASTER_KEY     # 'key' subcomponent of the secret
+              name: {{ .Values.openedx.meilisearch.auth.existingMasterKeySecret }}
+              key: MEILI_MASTER_KEY
 
         - name: MEILISEARCH_API_KEY_UID
           valueFrom:
             secretKeyRef:
-              name: meili-master     # name of an existing k8s secret
-              key: apiKeyUid     # 'key' subcomponent of the secret
+              name: {{ .Values.openedx.meilisearch.auth.apiKeyUid.secretName }}
+              key: {{ .Values.openedx.meilisearch.auth.apiKeyUid.secretKey }}
 
         - name: MEILISEARCH_INDEX_PREFIX
           value: "{{ .Values.openedx.meilisearch.indexPrefix | default "tutor_" }}"
@@ -267,12 +267,7 @@ spec:
         - name: DJANGO_SETTINGS_MODULE
           value: lms.envs.tutor.production
         {{- include "openedx.common.env" . | nindent 8 }}
-
-        - name: SOCIAL_AUTH_EDX_OAUTH2_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: social-auth-edx-oauth2-secret
-              key: clientSecret
+        {{- include "openedx.cms.env" . | nindent 8 }}
 
       volumeMounts:
         {{- include "openedx.common.volumeMounts" . | nindent 8 }}
@@ -481,14 +476,14 @@ spec:
         - name: SECRET_KEY
           valueFrom:
             secretKeyRef:
-              key: SECRET_KEY
-              name: notes-secretkey
+              name: {{ .Values.openedx.notes.secretKey.secretName }}
+              key: {{ .Values.openedx.notes.secretKey.secretKey }}
 
         - name: SOCIAL_AUTH_NOTES_OAUTH2_SECRET
           valueFrom:
             secretKeyRef:
-              name: social-auth-notes-oauth2-secret
-              key: clientSecret
+              name: {{ .Values.openedx.notes.socialAuthEdxOauth2Secret.secretName }}
+              key: {{ .Values.openedx.notes.socialAuthEdxOauth2Secret.secretKey }}
 
       volumeMounts:
         {{- include "openedx.common.volumeMounts" . | nindent 8 }}

@@ -22,6 +22,24 @@ commonAnnotations: {}
 
 openedx:
   enabled: true
+  platformName: "My Open edX"
+  platformDescription: "An Open edX instance deployed with Helm"
+  # TODO: unused
+  platformSupportEmail: "support@local.openedx.io"
+  contactEmail: "contact@local.openedx.io"
+  languageCode: "en"
+  jwtCommonAudience: "openedx"
+  jwtRsaPrivateKey:
+    secretName: "jwt-rsa"
+    secretKey: "privateKey"
+  jwtCommonSecretKey:
+    secretName: "jwt-common-secretkey"
+    secretKey: "SECRET_KEY"
+  secretKey:
+    secretName: "openedx-secretkey"
+    secretKey: "SECRET_KEY"
+
+  # Dev settings
   isDev: false
   local:
     # if set and `isDev: true`, will mount a volume from this path (useful for local development)
@@ -30,31 +48,37 @@ openedx:
     # This will be done automatically if using the ok3dx scripts
     srcFrom: ""
 
+  # Backups and Init
+  # Init job to setup the platform - MUST be launched manually, see `ok3dx` docs for more info!
+  init:
+    enabled: true
+    workflow:
+      timeout: 3600  # 1 hour in seconds
+  backups:
+    image:
+      repository: minio/mc
+      tag: RELEASE.2025-08-13T08-35-41Z
+      pullPolicy: IfNotPresent
+
+    media:
+      enabled: false
+      strategy:
+        type: Recreate
+      destination:
+        bucketName: "openedx-storage"
+        host: minio.backups.svc.cluster.local
+        port: 80
+        useSSL: false
+        accessKey:
+          secretName: s3-backups
+          secretKey: username
+        secretKey:
+          secretName: s3-backups
+          secretKey: password
+
+  # Ingress, Certs
   traefik:
     enabled: true
-
-  platformName: "My Open edX"
-  platformDescription: "An Open edX instance deployed with Helm"
-  # TODO: unused
-  platformSupportEmail: "support@local.openedx.io"
-  contactEmail: "contact@local.openedx.io"
-  languageCode: "en"
-  jwtCommonAudience: "openedx"
-
-  cache:
-    backend:
-      engine: django_redis.cache.RedisCache
-      host: redis
-      port: 6379
-      db: 1
-      credentials: "kv-db-credentials"
-
-  celeryBroker:
-    host: redis
-    vhost: "0"
-    port: 6379
-    credentials: "kv-db-credentials"
-    transport: "redis"
   certManager:
     enabled: true
     issuers:
@@ -68,11 +92,28 @@ openedx:
         kind: "Issuer"
         email: "certs@local.openedx.io"
         privateKeySecretRef: "le-key-prod"
+
+  # dbs, search and data stores
+  cache:
+    backend:
+      engine: django_redis.cache.RedisCache
+      host: redis
+      port: 6379
+      db: 1
+      credentials: "kv-db-credentials"
   s3:
     gradeBucket: "openedxgrades"
     profileImageBucket: "openedxprofiles"
     storageBucket: "openedx"
     fileUploadBucket: "openedxuploads"
+
+    accessKey:
+      secretName: s3-storage
+      secretKey: username
+    secretKey:
+      secretName: s3-storage
+      secretKey: password
+
     queryStringAuth: true
     signatureVersion: "s3v4"
     requestChecksumCalculation: "when_required"
@@ -82,7 +123,6 @@ openedx:
     defaultACL: ""
     addressingStyle: "auto"
     region: ""
-
   documentdb:
     host: mongodb
     port: 27017
@@ -93,7 +133,6 @@ openedx:
     replicaSet: ""
     useSSL: false
     options: {}
-
   db:
     engine: postgresql
     host: db-cluster-rw
@@ -102,15 +141,44 @@ openedx:
     credentials: "openedx-db-credentials"
     options: {}
 
-  init:
+  meilisearch:
+    # see https://github.com/meilisearch/meilisearch-kubernetes/tree/main/charts/meilisearch for more options
     enabled: true
-    workflow:
-      timeout: 3600  # 1 hour in seconds
+    indexPrefix: "tutor_"
+    publicUrl: "https://meilisearch.local.openedx.io"
+    service:
+      port: 7700
+      host: openedx-infra-meilisearch
+      scheme: "http"
+
+    auth:
+      # The secret must contain the key: MEILI_MASTER_KEY
+      existingMasterKeySecret: "meili-master"
+
+      # The secret must contain the key: apiKeyUid
+      apiKeyUid:
+        secretName: "meili-master"
+        secretKey: "apiKeyUid"
+      # The secret must contain the key: apiKey
+      apiKey:
+        secretName: "meili-master"
+        secretKey: "apiKey"
+
+  # core services
+  celeryBroker:
+    host: redis
+    vhost: "0"
+    port: 6379
+    credentials: "kv-db-credentials"
+    transport: "redis"
   cms:
     enabled: true
     replicas: 1
     uwsgiWorkers: 2
     siteId: 2
+    socialAuthEdxOauth2Secret:
+      secretName: "social-auth-edx-oauth2-secret"
+      secretKey: "clientSecret"
     application:
       name: cms
       port: 8000
@@ -194,7 +262,6 @@ openedx:
     # should match one of the cert-manager issuers above if using builtin cert-manager
     tlsIssuerName: "letsencrypt-staging"
     tlsIssuerKind: "Issuer"
-
   lmsWorker:
     name: lms-worker
 
@@ -225,12 +292,23 @@ openedx:
       tag: "20.0.0-indigo"
       pullPolicy: IfNotPresent
       pullSecrets: []
-  # plugins
+
+  # "plugins"
   notes:
     enabled: true
     replicas: 1
     workers: 2
     clientId: "notes"
+    clientSecret:
+      secretName: "notes-client-secret"
+      secretKey: "CLIENT_SECRET"
+    secretKey:
+      secretName: "notes-secretkey"
+      secretKey: "SECRET_KEY"
+    socialAuthEdxOauth2Secret:
+      secretName: "social-auth-notes-oauth2-secret"
+      secretKey: "clientSecret"
+
     # command: []
     # args: []
     diagnosticMode:
@@ -264,10 +342,15 @@ openedx:
         # The secret must contain the key: MEILI_MASTER_KEY
         existingMasterKeySecret: "meili-master"
         # The secret must contain the key: apiKeyUid
-        apiKeyUidSecret: "meili-master"
+        apiKeyUid:
+          secretName: "meili-master"
+          secretKey: "apiKeyUid"
         # The secret must contain the key: apiKey
-        apiKeySecret: "meili-master"
+        apiKey:
+          secretName: "meili-master"
+          secretKey: "apiKey"
 
+    # Notes db settings
     db:
       cluster:
         name: db-cluster
@@ -278,21 +361,3 @@ openedx:
       owner: notes
       credentials: "notes-db-credentials"
       options: {}
-
-  meilisearch:
-    # see https://github.com/meilisearch/meilisearch-kubernetes/tree/main/charts/meilisearch for more options
-    enabled: true
-    indexPrefix: "tutor_"
-    publicUrl: "https://meilisearch.local.openedx.io"
-    service:
-      port: 7700
-      host: openedx-infra-meilisearch
-      scheme: "http"
-
-    auth:
-      # The secret must contain the key: MEILI_MASTER_KEY
-      existingMasterKeySecret: "meili-master"
-      # The secret must contain the key: apiKeyUid
-      apiKeyUidSecret: "meili-master"
-      # The secret must contain the key: apiKey
-      apiKeySecret: "meili-master"

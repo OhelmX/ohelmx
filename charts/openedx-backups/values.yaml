@@ -1,0 +1,32 @@
+
+minio:
+  enabled: true
+
+  extendedOperator:
+    user:
+      name: s3-backups
+      secretName: s3-backups
+      secretKeyName: password
+    # FIXME: these MUST be found and set properly elsewhere too!!!
+    buckets:
+      - name: openedx-storage
+        versioning: true
+      - name: db-backups
+        versioning: false
+      - name: documentdb-backups
+        versioning: false
+
+  tenant:
+    name: minio-backups
+    exposeServices:
+      minio: false
+      console: false
+    # DO NOT SET BUCKETS HERE! They are NOT managed by this operator - see extendedOperator above!
+    # buckets: []
+
+    configSecret:
+      name: minio-env
+      existingSecret: true
+
+    certificate:
+      requestAutoCert: false

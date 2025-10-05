@@ -1,0 +1,28 @@
+{{- if and .Values.minio.enabled -}}
+{{- $namespace := .Release.Namespace -}}
+{{- $tenantName := .Values.minio.tenant.name -}}
+{{- range .Values.minio.extendedOperator.buckets -}}
+apiVersion: bfiola.dev/v1
+kind: MinioBucket
+metadata:
+  name: {{ .name }}
+spec:
+  # deletionPolicy: IfEmpty
+  # lifecycle:
+  #   Rules:
+  #     - Expiration:
+  #         Days: 1
+  #       Status: Enabled
+  #       ID: expire-after-one-day
+  name: {{ .name }}
+  deletionPolicy: {{ .deletionPolicy | default "IfEmpty" }}
+  tenantRef:
+    namespace: {{ $namespace }}
+    name: {{ $tenantName }}
+{{- if .versioning }}
+  versioning:
+    Status: Enabled
+{{- end }}
+---
+{{- end }}
+{{- end -}}

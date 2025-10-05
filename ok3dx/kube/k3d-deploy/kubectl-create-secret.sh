@@ -27,8 +27,10 @@ for i in $TLS_DOMAINS; do
 done
 
 echo '--- Applying secrets'
-kubectl -n ${NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/ok3dx/
-kubectl -n ${NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/ok3dx-infra/
-kubectl -n ${BACKUPS_NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/ok3dx-backups/
+kubectl -n ${NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/openedx/
+kubectl -n ${NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/openedx-infra/
+kubectl -n ${NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/openedx-shared/
+kubectl -n ${BACKUPS_NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/openedx-backups/
+kubectl -n ${BACKUPS_NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/openedx-shared/
 
 echo '--- Automatic secrets generation finished (for development ONLY)'

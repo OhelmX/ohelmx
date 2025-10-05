@@ -307,12 +307,13 @@ Shared environment variables
 - name: MEILISEARCH_API_KEY
   valueFrom:
     secretKeyRef:
-      name: meili-master
-      key: apiKey
+      name: {{ .Values.openedx.meilisearch.auth.apiKey.secretName }}
+      key: {{ .Values.openedx.meilisearch.auth.apiKey.secretKey }}
+
 - name: MEILISEARCH_MASTER_KEY
   valueFrom:
     secretKeyRef:
-      name: meili-master
+      name: {{ .Values.openedx.meilisearch.auth.existingMasterKeySecret }}
       key: MEILI_MASTER_KEY
 
 - name: KV_ENGINE
@@ -345,8 +346,8 @@ Shared environment variables
 - name: JWT_RSA_PRIVATE_KEY
   valueFrom:
     secretKeyRef:
-      name: jwt-rsa
-      key: privateKey
+      name: {{ .Values.openedx.jwtRsaPrivateKey.secretName }}
+      key: {{ .Values.openedx.jwtRsaPrivateKey.secretKey }}
 - name: JWT_COMMON_ISSUER
   value: "https://{{ .Values.openedx.lms.host }}/oauth2"
 - name: JWT_COMMON_AUDIENCE
@@ -354,13 +355,13 @@ Shared environment variables
 - name: JWT_COMMON_SECRET_KEY
   valueFrom:
     secretKeyRef:
-      name: jwt-common-secretkey
-      key: SECRET_KEY
+      name: {{ .Values.openedx.jwtCommonSecretKey.secretName }}
+      key: {{ .Values.openedx.jwtCommonSecretKey.secretKey }}
 - name: OPENEDX_SECRET_KEY
   valueFrom:
     secretKeyRef:
-      name: openedx-secretkey
-      key: SECRET_KEY
+      name: {{ .Values.openedx.secretKey.secretName }}
+      key: {{ .Values.openedx.secretKey.secretKey }}
 
 - name: S3_GRADE_BUCKET
   value: {{ .Values.openedx.s3.gradeBucket | quote }}
@@ -399,8 +400,8 @@ Shared CMS environment variables
 - name: SOCIAL_AUTH_EDX_OAUTH2_SECRET
   valueFrom:
     secretKeyRef:
-      name: social-auth-edx-oauth2-secret
-      key: clientSecret
+      name: {{ .Values.openedx.cms.socialAuthEdxOauth2Secret.secretName }}
+      key: {{ .Values.openedx.cms.socialAuthEdxOauth2Secret.secretKey }}
 - name: SOCIAL_AUTH_EDX_OAUTH2_URL_ROOT
   value: "http://{{ .Values.openedx.lms.service.name }}:{{ .Values.openedx.lms.service.port }}"
 {{- end }}
@@ -770,8 +771,8 @@ Shared notes environment variables
 - name: SECRET_KEY
   valueFrom:
     secretKeyRef:
-      key: SECRET_KEY
-      name: notes-secretkey
+      name: {{ .Values.openedx.notes.secretKey.secretName }}
+      key: {{ .Values.openedx.notes.secretKey.secretKey }}
 - name: DB_TYPE
   value: {{ .Values.openedx.notes.db.engine | quote }}
 - name: DB_PORT
@@ -781,13 +782,13 @@ Shared notes environment variables
 - name: DB_USERNAME
   valueFrom:
     secretKeyRef:
+      name: {{ .Values.openedx.notes.db.credentials }}
       key: username
-      name: notes-db-credentials
 - name: DB_PASSWORD
   valueFrom:
     secretKeyRef:
+      name: {{ .Values.openedx.notes.db.credentials }}
       key: password
-      name: notes-db-credentials
 - name: DB_HOST
   value: {{ .Values.openedx.notes.db.host | quote }}
 - name: DB_OPTIONS
@@ -798,8 +799,8 @@ Shared notes environment variables
 - name: CLIENT_SECRET
   valueFrom:
     secretKeyRef:
-      key: CLIENT_SECRET
-      name: notes-client-secret
+      name: {{ .Values.openedx.notes.clientSecret.secretName }}
+      key: {{ .Values.openedx.notes.clientSecret.secretKey }}
 - name: ES_DISABLED
   value: "True"
 - name: MEILISEARCH_ENABLED
@@ -809,8 +810,8 @@ Shared notes environment variables
 - name: MEILISEARCH_API_KEY
   valueFrom:
     secretKeyRef:
-      name: "{{ .Values.openedx.notes.meilisearch.auth.apiKeySecret }}"
-      key: apiKey
+      name: {{ .Values.openedx.meilisearch.auth.apiKey.secretName }}
+      key: {{ .Values.openedx.meilisearch.auth.apiKey.secretKey }}
 - name: MEILISEARCH_INDEX
   value: "{{ .Values.openedx.notes.meilisearch.searchIndex }}"
 - name: LOGGING
