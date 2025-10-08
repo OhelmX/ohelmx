@@ -240,7 +240,7 @@ spec:
           ./manage.py lms manage_user cms cms@openedx --unusable-password
           ./manage.py lms create_dot_application \
             --grant-type authorization-code \
-            --redirect-uris "https://${PREVIEW_HOST}/complete/edx-oauth2/" \
+            --redirect-uris "https://${CMS_HOST}/complete/edx-oauth2/" \
             --client-id cms-sso \
             --client-secret ${SOCIAL_AUTH_EDX_OAUTH2_SECRET} \
             --scopes user_id \
