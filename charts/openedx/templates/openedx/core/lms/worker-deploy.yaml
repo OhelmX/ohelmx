@@ -47,24 +47,45 @@ spec:
         command: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.lmsWorker.diagnosticMode.command "context" $) | nindent 10 }}
         {{- else if .Values.openedx.lmsWorker.command }}
         command: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.lmsWorker.command "context" $) | nindent 10 }}
+        {{- else if .Values.openedx.isDev }}
+        command:
+        - /bin/sh
+        - -c
+        args:
+        - |
+          for dir in /mnt/*; do
+            if [ -d "$dir" ] && [ -f "$dir/setup.py" ]; then
+              pip install -e "$dir"
+            fi
+          done
+          exec celery \
+            --app=lms.celery \
+            worker \
+            --loglevel={{ .Values.openedx.lmsWorker.loglevel | default "info" }} \
+            --max-tasks-per-child=100 \
+            --prefetch-multiplier=1 \
+            --without-gossip \
+            --without-mingle \
+            --hostname=edx.lms.core.default.%h \
+            --queues=edx.lms.core.default,edx.lms.core.high,edx.lms.core.high_mem
         {{- end }}
 
         {{- if dig "diagnosticMode" "enabled" false .Values.openedx.lmsWorker }}
         args: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.lmsWorker.diagnosticMode.args "context" $) | nindent 10 }}
-        {{- else if .Values.openedx.lmsWorker.args }}
+        {{- else if and .Values.openedx.lmsWorker.args (not .Values.openedx.isDev) }}
         args: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.lmsWorker.args "context" $) | nindent 11 }}
-        {{- else }}
+        {{- else if not .Values.openedx.isDev }}
         args:
         - celery
         - --app=lms.celery
         - worker
-        - --loglevel=info
-        - --hostname=edx.lms.core.default.%h
-        - --queues=edx.lms.core.default,edx.lms.core.high,edx.lms.core.high_mem
+        - --loglevel={{ .Values.openedx.lmsWorker.loglevel | default "info" }}
         - --max-tasks-per-child=100
         - --prefetch-multiplier=1
         - --without-gossip
         - --without-mingle
+        - --hostname=edx.lms.core.default.%h
+        - --queues=edx.lms.core.default,edx.lms.core.high,edx.lms.core.high_mem
         {{- end }}
 
         {{- if .Values.openedx.lmsWorker.resources }}

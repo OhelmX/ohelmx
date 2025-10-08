@@ -47,10 +47,22 @@ spec:
         command: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.lms.diagnosticMode.command "context" $) | nindent 10 }}
         {{- else if .Values.openedx.lms.command }}
         command: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.lms.command "context" $) | nindent 10 }}
+        {{- else if .Values.openedx.isDev }}
+        command:
+        - /bin/sh
+        - -c
+        args:
+        - |
+          for dir in /mnt/*; do
+            if [ -d "$dir" ] && [ -f "$dir/setup.py" ]; then
+              pip install -e "$dir"
+            fi
+          done
+          exec uwsgi --ini /openedx/uwsgi.ini
         {{- end }}
         {{- if .Values.openedx.lms.diagnosticMode.enabled }}
         args: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.lms.diagnosticMode.args "context" $) | nindent 10 }}
-        {{- else if .Values.openedx.lms.args }}
+        {{- else if and .Values.openedx.lms.args (not .Values.openedx.isDev) }}
         args: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.lms.args "context" $) | nindent 11 }}
         {{- end }}
 

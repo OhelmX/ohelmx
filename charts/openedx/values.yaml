@@ -134,7 +134,7 @@ openedx:
     useSSL: false
     options: {}
   db:
-    engine: postgresql
+    engine: 'openedx.core.djangoapps.db_backends.postgresql'
     host: db-cluster-rw
     port: 5432
     name: openedx
@@ -214,9 +214,12 @@ openedx:
       pullPolicy: IfNotPresent
       pullSecrets: []
         # - name: my-registry-secret
+    # extraDjangoSettings: |-
+    #   SILENCED_SYSTEM_CHECKS = ['fields.W342']
   cmsWorker:
     enabled: true
     name: cms-worker
+    loglevel: info
 
   lms:
     enabled: true
@@ -266,6 +269,7 @@ openedx:
   lmsWorker:
     enabled: true
     name: lms-worker
+    loglevel: info
 
   mfe:
     enabled: true
@@ -356,7 +360,7 @@ openedx:
     db:
       cluster:
         name: db-cluster
-      engine: postgresql
+      engine: 'django.db.backends.postgresql'
       host: db-cluster-rw
       port: 5432
       name: notes

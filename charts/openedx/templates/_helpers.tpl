@@ -586,11 +586,6 @@ LOGGING["loggers"]["blockstore.apps.bundles.storage"] = {"handlers": ["console"]
 # These warnings are visible in simple commands and init tasks
 import warnings
 
-# REMOVE-AFTER-V20: check if we can remove these lines after upgrade.
-from django.utils.deprecation import RemovedInDjango50Warning, RemovedInDjango51Warning
-# RemovedInDjango5xWarning: 'xxx' is deprecated. Use 'yyy' in 'zzz' instead.
-warnings.filterwarnings("ignore", category=RemovedInDjango50Warning)
-warnings.filterwarnings("ignore", category=RemovedInDjango51Warning)
 # DeprecationWarning: 'imghdr' is deprecated and slated for removal in Python 3.13
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="pgpy.constants")
 
@@ -773,7 +768,7 @@ Shared notes environment variables
     secretKeyRef:
       name: {{ .Values.openedx.notes.secretKey.secretName }}
       key: {{ .Values.openedx.notes.secretKey.secretKey }}
-- name: DB_TYPE
+- name: DB_ENGINE
   value: {{ .Values.openedx.notes.db.engine | quote }}
 - name: DB_PORT
   value: {{ .Values.openedx.notes.db.port | quote }}

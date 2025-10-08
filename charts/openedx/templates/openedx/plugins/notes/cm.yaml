@@ -21,7 +21,7 @@ data:
     options = json.loads(os.environ['DB_OPTIONS'])
     DATABASES = {
         "default": {
-            "ENGINE": f"django.db.backends.{ os.environ['DB_TYPE'] }",
+            "ENGINE": os.environ['DB_ENGINE'],
             "HOST": os.environ['DB_HOST'],
             "PORT": os.environ['DB_PORT'],
             "NAME": os.environ['DB_DATABASE'],

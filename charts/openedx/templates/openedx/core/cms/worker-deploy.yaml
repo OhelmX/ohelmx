@@ -46,24 +46,45 @@ spec:
         command: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cmsWorker.diagnosticMode.command "context" $) | nindent 10 }}
         {{- else if .Values.openedx.cmsWorker.command }}
         command: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cmsWorker.command "context" $) | nindent 10 }}
+        {{- else if .Values.openedx.isDev }}
+        command:
+        - /bin/sh
+        - -c
+        args:
+        - |
+          for dir in /mnt/*; do
+            if [ -d "$dir" ] && [ -f "$dir/setup.py" ]; then
+              pip install -e "$dir"
+            fi
+          done
+          exec celery \
+            --app=cms.celery \
+            worker \
+            --loglevel={{ .Values.openedx.cmsWorker.loglevel | default "info" }} \
+            --max-tasks-per-child=100 \
+            --prefetch-multiplier=1 \
+            --without-gossip \
+            --without-mingle \
+            --hostname=edx.cms.core.default.%h \
+            --queues=edx.cms.core.default,edx.cms.core.high,edx.cms.core.low
         {{- end }}
 
         {{- if dig "diagnosticMode" "enabled" false .Values.openedx.cmsWorker }}
         args: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cmsWorker.diagnosticMode.args "context" $) | nindent 10 }}
-        {{- else if .Values.openedx.cmsWorker.args }}
+        {{- else if and .Values.openedx.cmsWorker.args (not .Values.openedx.isDev) }}
         args: {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cmsWorker.args "context" $) | nindent 11 }}
-        {{- else }}
+        {{- else if not .Values.openedx.isDev }}
         args:
         - celery
         - --app=cms.celery
         - worker
         - --loglevel=info
-        - --hostname=edx.cms.core.default.%h
-        - --queues=edx.cms.core.default,edx.cms.core.high,edx.cms.core.low
         - --max-tasks-per-child=100
         - --prefetch-multiplier=1
         - --without-gossip
         - --without-mingle
+        - --hostname=edx.cms.core.default.%h
+        - --queues=edx.cms.core.default,edx.cms.core.high,edx.cms.core.low
         {{- end }}
 
         {{- if .Values.openedx.cmsWorker.resources }}
