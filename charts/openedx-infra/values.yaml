@@ -1,4 +1,3 @@
-
 global:
   isDev: false
   namespace: openedx

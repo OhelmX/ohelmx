@@ -14,7 +14,7 @@ if [ -f "${SCRIPT_DIR}/overrides-infra-local.yaml" ]; then
 fi
 
 helm upgrade --install ${APPNAME}-infra --namespace ${NAMESPACE} --create-namespace ${CHART_REPO}-infra \
-  --values ${SCRIPT_DIR}/infra.yaml ${EXTRA_VALUES}
+  --values ${SCRIPT_DIR}/overrides-infra.yaml --values ${SCRIPT_DIR}/overrides-infra-dev.yaml ${EXTRA_VALUES}
 
 echo '---'
 echo "Helm charts installed for ${APPNAME}-infra in namespace ${NAMESPACE}"

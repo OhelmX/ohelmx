@@ -215,6 +215,7 @@ openedx:
       pullSecrets: []
         # - name: my-registry-secret
   cmsWorker:
+    enabled: true
     name: cms-worker
 
   lms:
@@ -263,6 +264,7 @@ openedx:
     tlsIssuerName: "letsencrypt-staging"
     tlsIssuerKind: "Issuer"
   lmsWorker:
+    enabled: true
     name: lms-worker
 
   mfe:

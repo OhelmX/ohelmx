@@ -26,3 +26,13 @@ minio:
       host: minio-console.local.openedx.io
       path: /
       pathType: Prefix
+
+meilisearch:
+  ingress:
+    enabled: true
+    host: meilisearch.local.openedx.io
+    className: traefik
+    tls:
+      - secretName: openedx-meilisearch-local-openedx-io-cert
+        hosts:
+          - meilisearch.local.openedx.io

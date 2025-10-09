@@ -86,13 +86,7 @@ spec:
           value: {{ .Values.openedx.lms.siteId | quote }}
 
         {{- include "openedx.common.env" . | nindent 8 }}
-
-        {{- if .Values.openedx.lmsWorker.extraEnvVars }}
-        {{- include "common.tplvalues.render" (dict "value" .Values.openedx.lmsWorker.extraEnvVars "context" $) | nindent 8 }}
-        {{- end }}
-
-        {{- include "openedx.common.env" . | nindent 8 }}
-        {{- include "openedx.lms.env" . | nindent 8 }}
+        {{- include "openedx.cms.env" . | nindent 8 }}
 
         {{- if .Values.openedx.lmsWorker.extraEnvVars }}
         {{- include "common.tplvalues.render" (dict "value" .Values.openedx.lmsWorker.extraEnvVars "context" $) | nindent 8 }}
