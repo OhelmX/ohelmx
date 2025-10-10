@@ -30,8 +30,6 @@ minio:
 meilisearch:
   ingress:
     enabled: true
-    host: meilisearch.local.openedx.io
-    className: traefik
     tls:
       - secretName: openedx-meilisearch-local-openedx-io-cert
         hosts:

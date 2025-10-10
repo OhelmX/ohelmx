@@ -242,7 +242,7 @@ minio:
   ingress:
     api:
       enabled: false
-      ingressClassName: ""
+      ingressClassName: "traefik"
       labels: { }
       annotations: { }
       tls: [ ]
@@ -251,7 +251,7 @@ minio:
       pathType: Prefix
     console:
       enabled: false
-      ingressClassName: ""
+      ingressClassName: "traefik"
       labels: { }
       annotations: { }
       tls: [ ]

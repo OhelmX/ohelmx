@@ -82,7 +82,7 @@ releases:
   values:
   - ./overrides-backups.yaml
   - ./overrides-backups-dev.yaml
-  {{- if isFile "overrides-backups-local.yaml" }}
+  {{- if isFile "./overrides-backups-local.yaml" }}
   - ./overrides-backups-local.yaml
   {{- end }}
 
@@ -104,6 +104,6 @@ releases:
   values:
   - ./overrides-infra.yaml
   - ./overrides-infra-dev.yaml
-  {{- if isFile "overrides-infra-local.yaml" }}
+  {{- if isFile "./overrides-infra-local.yaml" }}
   - ./overrides-infra-local.yaml
   {{- end }}
