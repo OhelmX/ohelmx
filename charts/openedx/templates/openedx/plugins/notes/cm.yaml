@@ -45,7 +45,7 @@ data:
     LOGGING = json.loads(os.environ['LOGGING'])
 
     {{- if .Values.openedx.notes.extraDjangoSettings }}
-    {{ .Values.openedx.notes.extraDjangoSettings | indent 4 }}
+    {{ .Values.openedx.notes.extraDjangoSettings }}
     {{- end }}
 
 {{- end -}}

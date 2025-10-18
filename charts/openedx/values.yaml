@@ -79,6 +79,8 @@ openedx:
   # Ingress, Certs
   traefik:
     enabled: true
+    publicStoragePaths:
+      - /public/
   certManager:
     enabled: true
     issuers:

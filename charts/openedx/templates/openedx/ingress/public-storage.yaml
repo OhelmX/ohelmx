@@ -1,0 +1,26 @@
+{{- if and .Values.openedx.traefik.enabled .Values.openedx.traefik.publicStoragePaths -}}
+{{- $host := .Values.openedx.lms.host }}
+{{- $s3host := .Values.openedx.s3.host | default "minio" }}
+{{- $s3port := .Values.openedx.s3.port | default 80 }}
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: public-storage-ingressroute
+  annotations:
+    {{- include "openedx.annotations" . | nindent 4 }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    {{- range .Values.openedx.traefik.publicStoragePaths }}
+    - match: Host(`{{ $host }}`) && PathPrefix(`{{ . }}`)
+      kind: Rule
+      services:
+        - name: {{ $s3host }}
+          port: {{ $s3port }}
+    {{- end }}
+
+  tls:
+    {{- include "openedx.ingressroute.tlsname" (dict "component" "lms" "root" .) | nindent 4 }}
+
+{{- end -}}

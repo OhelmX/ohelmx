@@ -215,6 +215,9 @@ minio:
         versioning: true
       - name: openedxprofiles
         versioning: true
+      - name: public
+        versioning: true
+        public: true
 
   # see https://github.com/minio/operator/blob/master/helm/tenant/templates/tenant.yaml
   tenant:
