@@ -336,12 +336,7 @@ Shared environment variables
   value: {{ .Values.openedx.cache.backend.db | quote }}
 
 - name: SMTP_USE_SSL
-  value: "False"
-# FIXME: configure SMTP properly
-# - name: SMTP_USE_TLS
-#   value: "False"
-# - name: SMTP_HOST
-#   value: smtp.local.openedx.io
+  value: {{ .Values.openedx.smtp.useSSL | quote }}
 
 - name: JWT_RSA_PRIVATE_KEY
   valueFrom:
@@ -590,7 +585,7 @@ import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning, module="pgpy.constants")
 
 # Email
-EMAIL_USE_SSL = os.environ.get("SMTP_USE_SSL", False)
+EMAIL_USE_SSL = os.environ.get("SMTP_USE_SSL", "false").lower() == "true"
 # Forward all emails from edX's Automated Communication Engine (ACE) to django.
 ACE_ENABLED_CHANNELS = ["django_email"]
 ACE_CHANNEL_DEFAULT_EMAIL = "django_email"

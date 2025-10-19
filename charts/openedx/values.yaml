@@ -48,6 +48,22 @@ openedx:
     # This will be done automatically if using the ok3dx scripts
     srcFrom: ""
 
+  # SMTP settings
+  smtp:
+    host: smtp.local.openedx.io
+    port: 2525
+    useTLS: "false"
+    useSSL: "false"
+    credentials:
+      username:
+        # set secretName to "" to disable SMTP auth
+        secretName: smtp-credentials
+        secretKey: username
+      password:
+        # set secretName to "" to disable SMTP auth
+        secretName: smtp-credentials
+        secretKey: password
+
   # Backups and Init
   # Init job to setup the platform - MUST be launched manually, see `ok3dx` docs for more info!
   init:
