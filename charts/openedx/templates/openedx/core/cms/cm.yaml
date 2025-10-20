@@ -61,6 +61,7 @@ data:
         "cms",
     ]
     CORS_ORIGIN_WHITELIST.append(f"https://{CMS_HOST}")
+    CORS_ORIGIN_WHITELIST.append(f"https://{LMS_HOST}")
 
     # Authentication
     SOCIAL_AUTH_EDX_OAUTH2_KEY = "cms-sso"

@@ -21,6 +21,12 @@ commonAnnotations: {}
   # Additional annotations can be added here
 
 openedx:
+  cors:
+    allowedOrigins:
+      - "https://apps.local.openedx.io"
+      - "https://studio.local.openedx.io"
+      - "https://local.openedx.io"
+      - "null"
   enabled: true
   platformName: "My Open edX"
   platformDescription: "An Open edX instance deployed with Helm"

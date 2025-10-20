@@ -14,4 +14,34 @@ metadata:
   name: compress-gzip
 spec:
   compress: {}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: cors-allowed-origins
+spec:
+  headers:
+    accessControlAllowOriginList:
+{{- range .Values.openedx.cors.allowedOrigins }}
+      - "{{ . }}"
+{{- end }}
+    accessControlAllowCredentials: true
+    accessControlAllowMethods:
+      - GET
+      - POST
+      - OPTIONS
+      - PUT
+      - DELETE
+      - PATCH
+    accessControlAllowHeaders:
+      - Accept
+      - Authorization
+      - Content-Type
+      - Content-Disposition
+      - Content-Range
+      - X-CSRFToken
+      - X-Requested-With
+      - use-jwt-cookie
+    accessControlMaxAge: 86400
+
 {{- end -}}

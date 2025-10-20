@@ -17,6 +17,7 @@ spec:
         - name: apps-body-limit
         - name: add-headers
         - name: compress-gzip
+        - name: cors-allowed-origins
 {{- if .suppressPath }}
         - name: stripprefix-mfe-{{ .name }}
 {{- end }}
@@ -37,6 +38,7 @@ spec:
       - name: apps-body-limit
       - name: add-headers
       - name: compress-gzip
+      - name: cors-allowed-origins
       services:
       - name: {{ .Values.openedx.mfe.service.name | default "mfe" }}
         port: {{ .Values.openedx.mfe.service.port | default 8002 }}

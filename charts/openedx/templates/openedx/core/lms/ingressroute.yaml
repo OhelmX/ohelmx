@@ -51,6 +51,7 @@ spec:
       middlewares:
         - name: add-headers
         - name: compress-gzip
+        - name: cors-allowed-origins
 {{- if .suppressPath }}
         - name: stripprefix-lms-{{ .name }}
 {{- end }}
@@ -73,6 +74,7 @@ spec:
       - name: default-body-limit
       - name: add-headers
       - name: compress-gzip
+      - name: cors-allowed-origins
       services:
       - name: {{ .Values.openedx.lms.service.name | default "lms" }}
         port: {{ .Values.openedx.lms.service.port | default 8000 }}
@@ -106,6 +108,7 @@ spec:
     - name: default-body-limit
     - name: add-headers
     - name: compress-gzip
+    - name: cors-allowed-origins
     services:
     - name: {{ .Values.openedx.lms.service.name | default "lms" }}
       port: {{ .Values.openedx.lms.service.port | default 8000 }}

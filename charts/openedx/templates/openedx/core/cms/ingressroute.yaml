@@ -18,6 +18,7 @@ spec:
       middlewares:
         - name: add-headers
         - name: compress-gzip
+        - name: cors-allowed-origins
 {{- if .suppressPath }}
         - name: stripprefix-cms-{{ .name }}
 {{- end }}
@@ -32,6 +33,7 @@ spec:
         - name: studio-body-limit
         - name: add-headers
         - name: compress-gzip
+        - name: cors-allowed-origins
       services:
       - name: {{ .Values.openedx.cms.service.name | default "cms" }}
         port: {{ .Values.openedx.cms.service.port | default 8000 }}

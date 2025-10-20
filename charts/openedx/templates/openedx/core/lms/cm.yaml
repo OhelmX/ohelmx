@@ -103,6 +103,7 @@ data:
         "lms",
     ]
     CORS_ORIGIN_WHITELIST.append(f"https://{LMS_HOST}")
+    CORS_ORIGIN_WHITELIST.append(f"https://{CMS_HOST}")
 
     # Properly set the "secure" attribute on session/csrf cookies. This is required in
     # Chrome to support samesite=none cookies.
