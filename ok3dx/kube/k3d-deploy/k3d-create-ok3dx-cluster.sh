@@ -11,7 +11,7 @@
 echo '---'
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 source ${SCRIPT_DIR}/../../vars.sh
-echo "Creating k3d cluster for ${APPNAME} in namespace ${NAMESPACE}"
+echo "Creating k3d cluster for ${CLUSTERNAME}"
 
 mkdir -p ${SCRIPT_DIR}/volumes
 
@@ -22,7 +22,7 @@ fi
 
 # create the docker network if not present
 # This is required to reduce the MTU in cases where using a VPN (namely wireguard)
-NETWORK=k3d-${APPNAME}
+NETWORK=k3d-${CLUSTERNAME}
 EXISTING_NETWORK=$(docker network ls | grep " ${NETWORK} ")
 if [ -z "${EXISTING_NETWORK}" ]; then
   echo "Network ${NETWORK} not found, creating"
@@ -31,7 +31,7 @@ if [ -z "${EXISTING_NETWORK}" ]; then
 fi
 
 # make sure no other cluster is running
-k3d cluster stop --all
+# k3d cluster stop --all
 
 REGISTRY_CONFIG_FILE=${SCRIPT_DIR}/registries.yaml
 if [ -f ${REGISTRY_CONFIG_FILE} ]; then
@@ -49,7 +49,9 @@ fi
 
 echo "Creating cluster with image: ${K3S_IMAGE}"
 
-k3d cluster create ${APPNAME} --config ${SCRIPT_DIR}/k3d-config.yml \
+mkdir -p ~/.kube
+
+k3d cluster create ${CLUSTERNAME} --config ${SCRIPT_DIR}/k3d-ok3dx-config.yml \
   ${K3S_IMAGE} ${REGISTRY_CONFIG} \
   --network ${NETWORK} \
   --volume ${SCRIPT_DIR}/manifests/traefik-config.yaml:/var/lib/rancher/k3s/server/manifests/traefik-config.yaml@all \
@@ -58,15 +60,16 @@ k3d cluster create ${APPNAME} --config ${SCRIPT_DIR}/k3d-config.yml \
   --volume ${SCRIPT_DIR}/../../workspaces/apps/edx-platform:/openedx/edx-platform@all \
   --volume ${SCRIPT_DIR}/../../workspaces/mnt:/mnt@all
 
+# TODO: put this back when we have a better solution for local volumes
 # declare -a DIRECTORIES=(${APPNAME}-db ${APPNAME}-documentdb ${APPNAME}-minio ${APPNAME}-backups ${APPNAME}-meilisearch)
 # mkdir -p "${SCRIPT_DIR}/volumes/${DIRECTORIES[@]}"
 # sudo chmod 777 "${SCRIPT_DIR}/volumes/${DIRECTORIES[@]}"
 
-mkdir -p ~/.kube
-k3d kubeconfig merge ${APPNAME} --output ${KUBECONFIG}
-kubectl --kubeconfig ${KUBECONFIG} config set-context k3d-${APPNAME} --namespace=${NAMESPACE}
+k3d kubeconfig merge ${CLUSTERNAME} --output ${KUBECONFIG}
+kubectl --kubeconfig ${KUBECONFIG} config set-context k3d-${CLUSTERNAME} --namespace=${NAMESPACE}
+kubectl config use-context k3d-${CLUSTERNAME}
 
 # dockerhub and some other sites can be extremely slow over ipv6 in certain situations
-docker exec -i k3d-${APPNAME}-server-0 sysctl -w net.ipv6.conf.all.disable_ipv6=1
+docker exec -i k3d-${CLUSTERNAME}-server-0 sysctl -w net.ipv6.conf.all.disable_ipv6=1
 
-echo "Cluster ${APPNAME} created successfully"
+echo "Cluster ${CLUSTERNAME} created successfully"

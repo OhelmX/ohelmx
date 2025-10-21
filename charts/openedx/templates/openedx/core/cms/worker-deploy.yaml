@@ -37,6 +37,11 @@ spec:
 
       terminationGracePeriodSeconds: {{ .Values.openedx.cmsWorker.terminationGracePeriodSeconds | default 30 }}
 
+      {{- if .Values.openedx.isDev }}
+      initContainers:
+      {{- include "openedx.dev.caInitContainerForComponent" (dict "component" "cms" "root" .) | nindent 6 }}
+      {{- end }}
+
       containers:
       - name: {{ .Values.openedx.cmsWorker.name | default "cms-worker" }}
         image: {{ include "openedx.image" (dict "component" "cms" "root" .) }}
@@ -52,11 +57,7 @@ spec:
         - -c
         args:
         - |
-          for dir in /mnt/*; do
-            if [ -d "$dir" ] && [ -f "$dir/setup.py" ]; then
-              pip install -e "$dir"
-            fi
-          done
+          {{- include "openedx.dev.startupScript" . | nindent 10 }}
           exec celery \
             --app=cms.celery \
             worker \
@@ -115,6 +116,7 @@ spec:
         volumeMounts:
         {{- include "openedx.common.volumeMounts" . | nindent 8 }}
         {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
+        {{- include "openedx.dev.caVolumeMounts" . | nindent 8 }}
 
         {{- if .Values.openedx.cmsWorker.extraVolumeMounts }}
         {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cmsWorker.extraVolumeMounts "context" $) | nindent 8 }}
@@ -127,6 +129,7 @@ spec:
       volumes:
       {{- include "openedx.common.volumes" . | nindent 6 }}
       {{- include "openedx.dev.volumes" . | nindent 6 }}
+      {{- include "openedx.dev.caVolumes" . | nindent 6 }}
       {{- if .Values.openedx.cmsWorker.extraVolumes }}
       {{- include "common.tplvalues.render" (dict "value" .Values.openedx.cmsWorker.extraVolumes "context" $) | nindent 6 }}
       {{- end }}

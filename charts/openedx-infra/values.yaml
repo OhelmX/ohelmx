@@ -1,5 +1,4 @@
 global:
-  isDev: false
   namespace: openedx
   openedxVersion: "20.0.1-main"
   instanceId: "openedx-instance"
@@ -9,6 +8,15 @@ project:
   local:
     enabled: false
     enableNodePorts: false
+
+openedx:
+  isDev: false
+  dev:
+    files:
+      lbIP: ""
+    backups:
+      lbIP: ""
+
 
 # Common labels and annotations
 commonLabels:
@@ -28,7 +36,9 @@ db:
     retention: 7d          # keep 7 backups
     barmanObjectName: s3-store-db
     destinationPath: "db-backups"
-    endpointURL: "http://minio-backups-hl.backups.svc.cluster.local:9000"
+    host: backups.local.openedx.io
+    port: 80
+    useSSL: false
     walCompression: bzip2  # bzip2;gzip;lz4;snappy;xz;zstd
     dataCompression: bzip2  # bzip2;gzip;snappy
     s3Credentials:
@@ -62,9 +72,10 @@ db:
       enabled: true
       dbName: openedx
       dbOwner: openedx
-    # # To restore from a backup
-    #   source: bootstrap-source-db
-    #   barmanObjectName: s3-store-db
+      recovery:
+        # To restore from a backup
+        # backupSource: true
+        barmanObjectName: s3-store-db
 
     walArchive:
       enabled: true
@@ -102,7 +113,9 @@ ferretdb:
     retention: "7d"           # keep 7 backups
     barmanObjectName: s3-store-documentdb
     destinationPath: "documentdb-backups"
-    endpointURL: "http://minio-backups-hl.backups.svc.cluster.local:9000"
+    host: backups.local.openedx.io
+    port: 80
+    useSSL: false
     walCompression: bzip2  # bzip2;gzip;lz4;snappy;xz;zstd
     dataCompression: bzip2  # bzip2;gzip;snappy
     s3Credentials:
@@ -137,12 +150,10 @@ ferretdb:
       enabled: true
       dbName: ferretdb
       dbOwner: ferret
-
       recovery:
-        source: bootstrap-source-documentdb
-    # # # To restore from a backup
-    # #   source: s3-store-documentdb
-    # #   barmanObjectName: s3-store-documentdb
+        # To restore from a backup
+        # backupSource: true
+        barmanObjectName: "s3-store-documentdb"
 
     walArchive:
       enabled: true
@@ -196,7 +207,6 @@ meilisearch:
 
 minio:
   enabled: true
-
   extendedOperator:
     # Set this to create a user for OpenedX to use for storage
     # The secret with this name must exist and contain keys `secretKey`
@@ -245,16 +255,16 @@ minio:
   ingress:
     api:
       enabled: false
-      ingressClassName: ""
+      ingressClassName: "traefik"
       labels: { }
       annotations: { }
       tls: [ ]
-      host: minio.local.openedx.io
+      host: files.local.openedx.io
       path: /
       pathType: Prefix
     console:
       enabled: false
-      ingressClassName: ""
+      ingressClassName: "traefik"
       labels: { }
       annotations: { }
       tls: [ ]

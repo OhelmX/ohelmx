@@ -25,12 +25,12 @@ spec:
     name: {{ .Values.ferretdb.cluster.superuser.credentials | default "documentdb-super-credentials" }}
 
   bootstrap:
-  {{- if .Values.ferretdb.cluster.bootstrap.source }}
+  {{- if .Values.ferretdb.cluster.bootstrap.backupSource }}
   # To restore from a backup
     recovery:
-      source: {{ .Values.ferretdb.cluster.bootstrap.recovery.source | default "bootstrap-source" }}
+      source: "documentdb-cluster-bootstrap-source"
   externalClusters:
-  - name: {{ .Values.ferretdb.cluster.bootstrap.recovery.source | default "bootstrap-source" }}
+  - name: "documentdb-cluster-bootstrap-source"
     plugin:
       name: barman-cloud.cloudnative-pg.io
       parameters:

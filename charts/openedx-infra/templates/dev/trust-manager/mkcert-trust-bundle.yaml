@@ -1,0 +1,15 @@
+{{- if .Values.openedx.isDev -}}
+apiVersion: trust.cert-manager.io/v1alpha1
+kind: Bundle
+metadata:
+  name: mkcert-trust-bundle
+  namespace: cert-manager
+spec:
+  sources:
+    - secret:
+        name: mkcert-ca-key-pair
+        key: tls.crt
+  target:
+    configMap:
+      key: ca-bundle.crt
+{{- end -}}

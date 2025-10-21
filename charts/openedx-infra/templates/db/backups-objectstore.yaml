@@ -12,7 +12,7 @@ spec:
   retentionPolicy: {{ .Values.db.backups.retention | default "7d" | quote }}
   configuration:
     destinationPath: s3://{{ .Values.db.backups.destinationPath | default "db-backups" }}
-    endpointURL: {{ .Values.db.backups.endpointURL | default "http://minio-backups-hl.backups.svc.cluster.local:9000" }}
+    endpointURL: {{ printf "%s://%s:%v" (ternary "https" "http" .Values.db.backups.useSSL) .Values.db.backups.host (.Values.db.backups.port | int) | quote }}
     s3Credentials:
       accessKeyId:
         name: {{ .Values.db.backups.s3Credentials.accessKeyId.name | default "s3-backups" }}

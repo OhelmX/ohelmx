@@ -3,10 +3,19 @@ minio:
   enabled: true
 
   extendedOperator:
+    # user:
+    #   name: s3-backups
+    #   secretSecretName: s3-backups
+    #   secretKeyName: password
     user:
       name: s3-backups
+    accessKey:
       secretName: s3-backups
-      secretKeyName: password
+      secretKey: username
+    secretKey:
+      secretName: s3-backups
+      secretKey: password
+
     # FIXME: these MUST be found and set properly elsewhere too!!!
     buckets:
       - name: openedx-storage

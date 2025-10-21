@@ -366,9 +366,13 @@ Shared environment variables
   value: {{ .Values.openedx.s3.storageBucket | quote }}
 - name: S3_FILE_UPLOAD_BUCKET
   value: {{ .Values.openedx.s3.fileUploadBucket | quote }}
+
 # FIXME: what are these? Do we need them?
-# S3_CUSTOM_DOMAIN: ''
-# S3_PROFILE_IMAGE_CUSTOM_DOMAIN: ''
+- name: S3_CUSTOM_DOMAIN
+  value: {{ .Values.openedx.s3.s3CustomDomain | quote }}
+- name: S3_PROFILE_IMAGE_CUSTOM_DOMAIN
+  value: {{ .Values.openedx.s3.s3ProfileImageCustomDomain | quote }}
+
 - name: S3_SIGNATURE_VERSION
   value: {{ .Values.openedx.s3.signatureVersion | quote }}
 - name: S3_REQUEST_CHECKSUM_CALCULATION
@@ -810,6 +814,25 @@ Shared notes environment variables
 {{- end -}}
 
 {{/*
+Common dev startup script for installing CA and editable packages
+*/}}
+{{- define "openedx.dev.startupScript" -}}
+# Install custom CA into certifi bundle for Python requests/botocore
+CERTIFI_BUNDLE=$(python -c "import certifi; print(certifi.where())")
+if [ -f "$CERTIFI_BUNDLE" ] && [ -f /etc/ssl/certs/ca-certificates.crt ]; then
+  # Extract just our mkcert CA and append to certifi
+  grep -A 100 "BEGIN CERTIFICATE" /usr/local/share/ca-certificates/mkcert-ca.crt >> "$CERTIFI_BUNDLE" || true
+fi
+
+# Install editable packages from /mnt
+for dir in /mnt/*; do
+  if [ -d "$dir" ] && [ -f "$dir/setup.py" ]; then
+    pip install -e "$dir"
+  fi
+done
+{{- end -}}
+
+{{/*
 Shared dev volume mounts
 */}}
 {{- define "openedx.dev.volumeMounts" -}}
@@ -832,6 +855,119 @@ Shared dev volumes
 - name: mnt
   hostPath:
     path: /mnt
+{{- end }}
+{{- end -}}
+
+{{/*
+CA trust init container for development with component parameter
+Usage: {{ include "openedx.dev.caInitContainerForComponent" (dict "component" "mfe" "root" .) }}
+Uses the specified component's image to ensure cert compatibility
+*/}}
+{{- define "openedx.dev.caInitContainerForComponent" -}}
+{{- $component := .component -}}
+{{- $root := .root -}}
+{{- if $root.Values.openedx.isDev }}
+- name: install-custom-ca
+  image: {{ include "openedx.image" (dict "component" $component "root" $root) }}
+  imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" $component "root" $root) }}
+  securityContext:
+    runAsUser: 0
+  command:
+  - sh
+  - -c
+  - |
+    # Copy system certs from the image to our emptyDir volumes
+    cp -r /etc/ssl/certs/* /shared-etc-ssl-certs/ 2>/dev/null || true
+    cp -r /usr/local/share/ca-certificates/* /shared-usr-local-ca-certs/ 2>/dev/null || true
+
+    # Add our custom CA
+    cp /tmp/ca-bundle/ca-bundle.crt /shared-usr-local-ca-certs/mkcert-ca.crt
+
+    # Run update-ca-certificates with the shared directories
+    # We need to temporarily mount them in the standard locations
+    rm -rf /etc/ssl/certs/*
+    rm -rf /usr/local/share/ca-certificates/*
+    cp -r /shared-etc-ssl-certs/* /etc/ssl/certs/
+    cp -r /shared-usr-local-ca-certs/* /usr/local/share/ca-certificates/
+
+    update-ca-certificates
+
+    # Copy back the updated certs to shared volumes
+    cp -r /etc/ssl/certs/* /shared-etc-ssl-certs/
+    cp -r /usr/local/share/ca-certificates/* /shared-usr-local-ca-certs/
+
+    # Ensure readable by all users
+    chmod -R 755 /shared-etc-ssl-certs
+    chmod -R 755 /shared-usr-local-ca-certs
+    echo "Custom CA installed successfully"
+  volumeMounts:
+  - name: ca-bundle
+    mountPath: /tmp/ca-bundle
+    readOnly: true
+  - name: usr-local-share-ca-certs
+    mountPath: /shared-usr-local-ca-certs
+  - name: etc-ssl-certs
+    mountPath: /shared-etc-ssl-certs
+{{- end }}
+{{- end -}}
+
+{{/*
+CA trust volume mounts for development
+*/}}
+{{- define "openedx.dev.caVolumeMounts" -}}
+{{- if .Values.openedx.isDev }}
+- name: usr-local-share-ca-certs
+  mountPath: /usr/local/share/ca-certificates
+- name: etc-ssl-certs
+  mountPath: /etc/ssl/certs
+{{- end }}
+{{- end -}}
+
+{{/*
+CA trust init container for MinIO mc (Alpine-based)
+mc uses ${MC_CONFIG_DIR}/certs/CAs/ for custom CA certificates
+*/}}
+{{- define "openedx.dev.mcCaInitContainer" -}}
+{{- if .Values.openedx.isDev }}
+- name: install-custom-ca
+  image: alpine:latest
+  imagePullPolicy: IfNotPresent
+  securityContext:
+    runAsUser: 1000
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+  command:
+  - sh
+  - -c
+  - |
+    # Create the mc CAs directory
+    mkdir -p /mc-config/certs/CAs
+
+    # Copy the custom CA certificate
+    cp /tmp/ca-bundle/ca-bundle.crt /mc-config/certs/CAs/mkcert-ca.crt
+
+    echo "Custom CA installed successfully in /mc-config/certs/CAs/"
+  volumeMounts:
+  - name: ca-bundle
+    mountPath: /tmp/ca-bundle
+    readOnly: true
+  - name: mc-config
+    mountPath: /mc-config
+{{- end }}
+{{- end -}}
+
+{{/*
+CA trust volumes for development
+*/}}
+{{- define "openedx.dev.caVolumes" -}}
+{{- if .Values.openedx.isDev }}
+- name: ca-bundle
+  configMap:
+    name: mkcert-trust-bundle
+- name: usr-local-share-ca-certs
+  emptyDir: {}
+- name: etc-ssl-certs
+  emptyDir: {}
 {{- end }}
 {{- end -}}
 

@@ -38,6 +38,11 @@ spec:
 
       {{- include "openedx.imagePullSecrets" . | nindent 6 }}
 
+      {{- if .Values.openedx.isDev }}
+      initContainers:
+      {{- include "openedx.dev.caInitContainerForComponent" (dict "component" "lms" "root" .) | nindent 6 }}
+      {{- end }}
+
       containers:
       - name: {{ .Values.openedx.lms.application.name | default "lms" }}
         image: {{ include "openedx.image" (dict "component" "lms" "root" .) }}
@@ -53,11 +58,7 @@ spec:
         - -c
         args:
         - |
-          for dir in /mnt/*; do
-            if [ -d "$dir" ] && [ -f "$dir/setup.py" ]; then
-              pip install -e "$dir"
-            fi
-          done
+          {{- include "openedx.dev.startupScript" . | nindent 10 }}
           exec uwsgi --ini /openedx/uwsgi.ini
         {{- end }}
         {{- if .Values.openedx.lms.diagnosticMode.enabled }}
@@ -111,6 +112,7 @@ spec:
         volumeMounts:
         {{- include "openedx.common.volumeMounts" . | nindent 8 }}
         {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
+        {{- include "openedx.dev.caVolumeMounts" . | nindent 8 }}
         - name: uwsgi-config
           mountPath: /openedx/uwsgi.ini
           subPath: uwsgi.ini
@@ -126,6 +128,7 @@ spec:
       volumes:
       {{- include "openedx.common.volumes" . | nindent 6 }}
       {{- include "openedx.dev.volumes" . | nindent 6 }}
+      {{- include "openedx.dev.caVolumes" . | nindent 6 }}
       - name: uwsgi-config
         configMap:
           name: openedx-uwsgi-config

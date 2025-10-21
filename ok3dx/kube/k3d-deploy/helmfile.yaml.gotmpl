@@ -1,3 +1,8 @@
+environments:
+  default:
+  dev:
+  production:
+---
 repositories:
 - name: minio-operator
   url: https://operator.min.io/
@@ -12,24 +17,37 @@ releases:
 - name: cert-manager
   namespace: cert-manager
   chart: oci://quay.io/jetstack/charts/cert-manager
-  version: v1.18.2
+  version: v1.19.1
   wait: true
   waitForJobs: true
   set:
   - name: crds.enabled
     value: "true"
+
+- name: trust-manager
+  installed: {{ eq .Environment.Name "dev" | toYaml }}
+  namespace: cert-manager
+  chart: oci://quay.io/jetstack/charts/trust-manager
+  version: v0.20.2
+  wait: true
+  waitForJobs: true
+  needs:
+  - cert-manager/cert-manager
+
 - name: minio-operator
   namespace: minio-operator
   wait: true
   waitForJobs: true
   chart: minio-operator/operator
   version: 7.1.1
+
 - name: minio-operator-ext-crds
   namespace: minio-operator
   wait: true
   waitForJobs: true
   chart: minio-operator-ext/crds
-  version: 3.2.0-rc.2
+  version: 3.3.0-rc.1
+
 - name: minio-operator-ext-operator
   namespace: minio-operator
   wait: true
@@ -37,17 +55,19 @@ releases:
   needs:
   - minio-operator/minio-operator-ext-crds
   chart: minio-operator-ext/operator
-  version: 3.2.0-rc.2
+  version: 3.3.0-rc.1
+
 - name: redis-operator
   namespace: ot-operators
   wait: true
   waitForJobs: true
   chart: ot-helm/redis-operator
   version: 0.22.1
+
 - name: argo
   namespace: argo
   chart: oci://ghcr.io/argoproj/argo-helm/argo-workflows
-  version: 0.45.26
+  version: 0.45.27
   set:
   - name: workflow.serviceAccount.create
     value: "true"
@@ -55,6 +75,7 @@ releases:
     value: "true"
   - name: controller.workflowNamespaces[0] # Explicitly define the first list item
     value: "openedx"
+
 - name: cnpg
   namespace: cnpg-system
   chart: oci://ghcr.io/cloudnative-pg/charts/cloudnative-pg
@@ -63,28 +84,15 @@ releases:
   waitForJobs: true
   needs:
   - cert-manager/cert-manager
-  hooks:
-  - events: ["postsync"]
-    command: "kubectl"
-    args: ["apply", "-f", "https://github.com/cloudnative-pg/plugin-barman-cloud/releases/download/v0.7.0/manifest.yaml"]
 
-- name: minio-backups
-  namespace: backups
-  # chart: minio-operator/tenant
-  chart: ../../../charts/openedx-backups
-  version: 0.1.0
+- name: plugin-barman-cloud
+  namespace: cnpg-system
+  chart: oci://ghcr.io/cloudnative-pg/charts/plugin-barman-cloud
+  version: 0.2.0
   wait: true
   waitForJobs: true
   needs:
-  - minio-operator/minio-operator
-  - minio-operator/minio-operator-ext-crds
-  - minio-operator/minio-operator-ext-operator
-  values:
-  - ./overrides-backups.yaml
-  - ./overrides-backups-dev.yaml
-  {{- if isFile "overrides-backups-local.yaml" }}
-  - ./overrides-backups-local.yaml
-  {{- end }}
+  - cnpg-system/cnpg
 
 - name: openedx-infra
   needs:
@@ -95,15 +103,25 @@ releases:
   - ot-operators/redis-operator
   - argo/argo
   - cnpg-system/cnpg
-  - backups/minio-backups
   namespace: openedx
   chart: ../../../charts/openedx-infra
   version: 0.1.0
   wait: true
   waitForJobs: true
+
   values:
   - ./overrides-infra.yaml
+  {{ if (eq .Environment.Name "dev") }}
   - ./overrides-infra-dev.yaml
-  {{- if isFile "overrides-infra-local.yaml" }}
+  {{ end }}
+  {{- if isFile "./overrides-infra-local.yaml" }}
   - ./overrides-infra-local.yaml
   {{- end }}
+  {{ if (eq .Environment.Name "dev") }}
+  set:
+    - name: openedx.dev.files.lbIP
+      value: {{ requiredEnv "LB_IP" }}
+    - name: openedx.dev.backups.lbIP
+      value: {{ requiredEnv "BACKUPS_LB_IP" }}
+
+  {{ end }}

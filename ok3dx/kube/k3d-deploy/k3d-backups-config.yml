@@ -1,0 +1,34 @@
+# k3d configuration file
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+servers: 1
+kubeAPI:
+  host: "localhost"
+  hostIP: "127.0.0.1"
+  hostPort: "6448"
+
+ports:
+  - port: 30480:80
+    nodeFilters:
+      - loadbalancer
+  - port: 30443:443
+    nodeFilters:
+      - loadbalancer
+
+options:
+  k3d:
+    wait: true
+    timeout: "60s"
+    disableLoadbalancer: false
+    disableImageVolume: false
+    disableRollback: false
+
+  k3s:
+    extraArgs:
+      - arg: "--tls-san=127.0.0.1"
+        nodeFilters:
+          - server:*
+
+  kubeconfig:
+    updateDefaultKubeconfig: false
+    switchCurrentContext: false

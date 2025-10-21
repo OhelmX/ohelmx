@@ -27,6 +27,12 @@ spec:
         {{- include "openedx.componentLabels" (dict "component" "backups" "root" .) | nindent 8 }}
     spec:
       restartPolicy: Always
+
+      {{- if .Values.openedx.isDev }}
+      initContainers:
+      {{- include "openedx.dev.mcCaInitContainer" . | nindent 6 }}
+      {{- end }}
+
       containers:
         - name: mc-mirror
           image: {{ include "openedx.image" (dict "component" "backups" "root" .) }}
@@ -129,6 +135,11 @@ spec:
         fsGroup: 1000
       terminationGracePeriodSeconds: 30
       volumes:
+        {{- if .Values.openedx.isDev }}
+        - name: ca-bundle
+          configMap:
+            name: mkcert-trust-bundle
+        {{- end }}
         - name: mc-config
           emptyDir: {}
 

@@ -88,7 +88,7 @@ openedx:
         type: Recreate
       destination:
         bucketName: "openedx-storage"
-        host: minio.backups.svc.cluster.local
+        host: backups.local.openedx.io
         port: 80
         useSSL: false
         accessKey:
@@ -126,10 +126,10 @@ openedx:
       db: 1
       credentials: "kv-db-credentials"
   s3:
+    fileUploadBucket: "openedxuploads"
     gradeBucket: "openedxgrades"
     profileImageBucket: "openedxprofiles"
     storageBucket: "openedx"
-    fileUploadBucket: "openedxuploads"
 
     accessKey:
       secretName: s3-storage
@@ -141,9 +141,11 @@ openedx:
     queryStringAuth: true
     signatureVersion: "s3v4"
     requestChecksumCalculation: "when_required"
-    host: minio
-    port: 80
-    useSSL: false
+    host: files.local.openedx.io
+    port: 443
+    useSSL: true
+    s3CustomDomain: ""
+    s3ProfileImageCustomDomain: ""
     defaultACL: ""
     addressingStyle: "auto"
     region: ""
@@ -228,6 +230,7 @@ openedx:
     existingTlsSecretName: ""  # if set, will use this TLS secret directly
     # should match one of the cert-manager issuers above if using builtin cert-manager
     tlsIssuerName: "letsencrypt-staging"
+
     tlsIssuerKind: "Issuer"
 
     bookUrl: ""

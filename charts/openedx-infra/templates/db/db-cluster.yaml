@@ -23,12 +23,12 @@ spec:
     size: {{ .Values.db.cluster.storage.size | default "5Gi" }}
 
   bootstrap:
-  {{- if .Values.db.cluster.bootstrap.source }}
+  {{- if .Values.db.cluster.bootstrap.backupSource }}
   # To restore from a backup
     recovery:
-      source: {{ .Values.db.cluster.bootstrap.recovery.source | default "bootstrap-source" }}
+      source: "db-cluster-bootstrap-source"
   externalClusters:
-  - name: {{ .Values.db.cluster.bootstrap.recovery.source | default "bootstrap-source" }}
+  - name: "db-cluster-bootstrap-source"
     plugin:
       name: barman-cloud.cloudnative-pg.io
       parameters:

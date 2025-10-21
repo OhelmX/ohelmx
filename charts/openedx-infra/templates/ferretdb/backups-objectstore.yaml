@@ -11,7 +11,7 @@ spec:
   retentionPolicy: {{ .Values.ferretdb.backups.retention | default "7d" | quote }}
   configuration:
     destinationPath: s3://{{ .Values.ferretdb.backups.destinationPath | default "documentdb-backups" }}
-    endpointURL: {{ .Values.ferretdb.backups.endpointURL | default "http://minio-backups-hl.backups.svc.cluster.local:9000" }}
+    endpointURL: {{ printf "%s://%s:%v" (ternary "https" "http" .Values.ferretdb.backups.useSSL) .Values.ferretdb.backups.host (.Values.ferretdb.backups.port | int) | quote }}
     s3Credentials:
       accessKeyId:
         name: {{ .Values.ferretdb.backups.s3Credentials.accessKeyId.name | default "s3-backups" }}

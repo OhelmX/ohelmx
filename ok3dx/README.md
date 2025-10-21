@@ -85,7 +85,7 @@ The system also relies on the following services, currently installed with `k3d`
 Init your workstation setup:
 
 ```bash
-git clone https://github.com/OhelmX/ohelmx.git && cd ohelmx
+git clone https://github.com/OhelmX/ohelmx.git && cd ohelmx/ok3dx/
 # or git@github.com:OhelmX/ohelmx.git
 cp --update vars.sh.default vars.sh && touch kube/k3d-deploy/{overrides-local.yaml,overrides-infra-local.yaml} && mkdir -p ~/bin
 ```
@@ -104,6 +104,7 @@ bash kube/k3d-deploy/k3d-create-cluster.sh && bash kube/k3d-deploy/kubectl-creat
 
 ```bash
 bash kube/k3d-deploy/pre-install.sh
+bash kube/k3d-deploy/kubectl-create-tls.sh
 ```
 
 ### Reinstall `openedx-infra`

@@ -5,10 +5,13 @@ kind: MinioUser
 metadata:
   name: {{ .Values.minio.extendedOperator.user.name }}
 spec:
-  accessKey: {{ .Values.minio.extendedOperator.user.name }}
+  # accessKey: {{ .Values.minio.extendedOperator.user.name }}
+  accessKeyRef:
+    name: {{ .Values.minio.extendedOperator.accessKey.secretName }}
+    key: {{ .Values.minio.extendedOperator.accessKey.secretKey }}
   secretKeyRef:
-    name: {{ .Values.minio.extendedOperator.user.secretName }}
-    key: {{ .Values.minio.extendedOperator.user.secretKeyName }}
+    name: {{ .Values.minio.extendedOperator.secretKey.secretName }}
+    key: {{ .Values.minio.extendedOperator.secretKey.secretKey }}
   tenantRef:
     namespace: {{ .Release.Namespace }}
     name: {{ .Values.minio.tenant.name }}

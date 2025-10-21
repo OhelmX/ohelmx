@@ -1,10 +1,10 @@
-global:
-  isDev: false
+openedx:
+  isDev: true
 
 project:
   local:
-    enabled: false
-    enableNodePorts: false
+    enabled: true
+    enableNodePorts: true
 
 minio:
   tenant:
@@ -17,21 +17,36 @@ minio:
     api:
       enabled: true
       ingressClassName: "traefik"
-      host: minio.local.openedx.io
+      host: files.local.openedx.io
       path: /
       pathType: Prefix
+      annotations:
+        cert-manager.io/cluster-issuer: mkcert-issuer
+
+      tls:
+        - hosts:
+            - files.local.openedx.io
+          secretName: openedx-files-local-openedx-io-cert
     console:
       enabled: true
       ingressClassName: "traefik"
       host: minio-console.local.openedx.io
       path: /
       pathType: Prefix
+      annotations:
+        cert-manager.io/cluster-issuer: mkcert-issuer
+      tls:
+        - hosts:
+            - minio-console.local.openedx.io
+          secretName: openedx-minio-studio-local-openedx-io-cert
 
 meilisearch:
   ingress:
     enabled: true
     host: meilisearch.local.openedx.io
     className: traefik
+    annotations:
+      cert-manager.io/cluster-issuer: mkcert-issuer
     tls:
       - secretName: openedx-meilisearch-local-openedx-io-cert
         hosts:

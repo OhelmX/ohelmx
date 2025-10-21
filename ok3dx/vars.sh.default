@@ -5,8 +5,6 @@ export NAMESPACE=openedx
 export INGRESS_NAMESPACE=openedx  # not currently used, but may be useful in future for Gateway API
 export BACKUPS_NAMESPACE=backups
 
-export TLS_DOMAINS="local.openedx.io preview.local.openedx.io studio.local.openedx.io meilisearch.local.openedx.io apps.local.openedx.io files.local.openedx.io notes.local.openedx.io"
-
 export CONTAINER_REGISTRY_NAME=registry.ok3dx.local.openedx.io
 export CONTAINER_REGISTRY_PORT=5001
 
@@ -14,6 +12,8 @@ export TLS_SECRET_NAME=${APPNAME}-${APPNAME}-cert
 export ENVIRONMENT=${ENVIRONMENT:-prod}
 
 export KUBECONFIG=~/.kube/config.k3d
+export CLUSTERNAME=ok3dx
+export BACKUPS_CLUSTERNAME=ok3dx-backups
 export CONTAINER_USER_ID=1001
 export K3S_IMAGE_NAME=docker.io/rancher/k3s:v1.34.1-k3s1
 export GIT_VERSION=$(git describe --tags)

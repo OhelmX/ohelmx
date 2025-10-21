@@ -1,8 +1,6 @@
 # k3d configuration file
 apiVersion: k3d.io/v1alpha5
 kind: Simple
-metadata:
-  name: ok3dx
 servers: 1
 kubeAPI:
   host: "localhost"
@@ -43,15 +41,10 @@ ports:
   - port: 30436:30436
     nodeFilters:
       - loadbalancer
-  # mysql
+  # unused
   - port: 30437:30437
     nodeFilters:
       - loadbalancer
-
-env:
-  - envVar: name=ok3dx
-    nodeFilters:
-      - all
 
 options:
   k3d:

@@ -1,0 +1,51 @@
+environments:
+  default:
+  dev:
+  production:
+---
+repositories:
+- name: minio-operator
+  url: https://operator.min.io/
+- name: minio-operator-ext
+  url: https://benfiola.github.io/minio-operator-ext/charts
+
+releases:
+- name: minio-operator
+  namespace: minio-operator
+  wait: true
+  waitForJobs: true
+  chart: minio-operator/operator
+  version: 7.1.1
+- name: minio-operator-ext-crds
+  namespace: minio-operator
+  wait: true
+  waitForJobs: true
+  chart: minio-operator-ext/crds
+  version: 3.3.0-rc.1
+- name: minio-operator-ext-operator
+  namespace: minio-operator
+  wait: true
+  waitForJobs: true
+  needs:
+  - minio-operator/minio-operator-ext-crds
+  chart: minio-operator-ext/operator
+  version: 3.3.0-rc.1
+- name: minio-backups
+  namespace: backups
+  # chart: minio-operator/tenant
+  chart: ../../../charts/openedx-backups
+  version: 0.1.0
+  wait: true
+  waitForJobs: true
+  needs:
+  - minio-operator/minio-operator
+  - minio-operator/minio-operator-ext-crds
+  - minio-operator/minio-operator-ext-operator
+  values:
+  - ./overrides-backups.yaml
+  {{ if (eq .Environment.Name "dev") }}
+  - ./overrides-backups-dev.yaml
+  {{ end }}
+  {{- if isFile "./overrides-backups-local.yaml" }}
+  - ./overrides-backups-local.yaml
+  {{- end }}
