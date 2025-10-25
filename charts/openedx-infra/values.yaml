@@ -8,7 +8,7 @@ project:
   local:
     enabled: false
     enableNodePorts: false
-
+# .Values.openedx.certManager.issuers
 openedx:
   isDev: false
   dev:
@@ -17,6 +17,18 @@ openedx:
     backups:
       lbIP: ""
 
+  certManager:
+    issuers: []
+      # - server: https://acme-staging-v02.api.letsencrypt.org/directory
+      #   name: "letsencrypt-staging"
+      #   kind: "Issuer"
+      #   email: "certs@local.openedx.io"
+      #   privateKeySecretRef: "le-key-staging"
+      # - server: https://acme-v02.api.letsencrypt.org/directory
+      #   name: "letsencrypt-prod"
+      #   kind: "Issuer"
+      #   email: "certs@local.openedx.io"
+      #   privateKeySecretRef: "le-key-prod"
 
 # Common labels and annotations
 commonLabels:
@@ -187,7 +199,7 @@ meilisearch:
     existingMasterKeySecret: "meili-master"
 
   ingress:
-    enabled: false
+    enabled: true
     className: "traefik"
     annotations: {}
     path: /

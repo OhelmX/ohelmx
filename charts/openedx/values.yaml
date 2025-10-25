@@ -103,19 +103,6 @@ openedx:
     enabled: true
     publicStoragePaths:
       - /public/
-  certManager:
-    enabled: true
-    issuers:
-      - server: https://acme-staging-v02.api.letsencrypt.org/directory
-        name: "letsencrypt-staging"
-        kind: "Issuer"
-        email: "certs@local.openedx.io"
-        privateKeySecretRef: "le-key-staging"
-      - server: https://acme-v02.api.letsencrypt.org/directory
-        name: "letsencrypt-prod"
-        kind: "Issuer"
-        email: "certs@local.openedx.io"
-        privateKeySecretRef: "le-key-prod"
 
   # dbs, search and data stores
   cache:
@@ -230,11 +217,9 @@ openedx:
     existingTlsSecretName: ""  # if set, will use this TLS secret directly
     # should match one of the cert-manager issuers above if using builtin cert-manager
     tlsIssuerName: "letsencrypt-staging"
-
     tlsIssuerKind: "Issuer"
 
     bookUrl: ""
-    contactEmail: "contact@local.openedx.io"
     image:
       repository: ghcr.io/ohelmx/openedx
       tag: "20.0.1-main-indigo-ok3dx.2"
@@ -281,7 +266,6 @@ openedx:
     tlsIssuerKind: "Issuer"
 
     bookUrl: ""
-    contactEmail: "contact@local.openedx.io"
     image:
       repository: ghcr.io/ohelmx/openedx
       tag: "20.0.1-main-indigo-ok3dx.2"

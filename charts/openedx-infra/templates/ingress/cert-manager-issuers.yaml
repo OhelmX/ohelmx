@@ -1,0 +1,25 @@
+{{- if .Values.openedx.certManager.issuers }}
+{{ $namespace := .Release.Namespace }}
+{{ range $issuer := .Values.openedx.certManager.issuers }}
+{{ if and $issuer.name $issuer.server $issuer.email $issuer.privateKeySecretRef }}
+---
+apiVersion: cert-manager.io/v1
+kind: {{ $issuer.kind | default "Issuer" }}
+metadata:
+  name: {{ $issuer.name }}
+{{- if not (eq ($issuer.kind | default "Issuer") "ClusterIssuer") }}
+  namespace: {{ $issuer.namespace | default $namespace }}
+{{- end }}
+spec:
+  acme:
+    server: {{ $issuer.server }}
+    email: {{ $issuer.email }}
+    privateKeySecretRef:
+      name: {{ $issuer.privateKeySecretRef }}
+    solvers:
+    - http01:
+        ingress:
+          class: traefik
+{{ end }}
+{{ end }}
+{{ end }}

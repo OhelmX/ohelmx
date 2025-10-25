@@ -22,7 +22,6 @@ minio:
       pathType: Prefix
       annotations:
         cert-manager.io/cluster-issuer: mkcert-issuer
-
       tls:
         - hosts:
             - files.local.openedx.io
