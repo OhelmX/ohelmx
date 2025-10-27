@@ -59,7 +59,7 @@ RUN git config --global user.email "tutor@overhang.io" \
 FROM scratch AS edx-platform
 COPY --from=code /openedx/edx-platform /
 
-
+FROM scratch AS mnt-packages
 
 
 ###### Install python requirements in virtualenv
@@ -172,7 +172,15 @@ ENV STATIC_ROOT_CMS=/openedx/staticfiles/studio
 WORKDIR /openedx/edx-platform
 
 
+# add dynamic /mnt packages
+COPY --link --chown=$APP_USER_ID:$APP_USER_ID --from=mnt-packages / /mnt/
 
+# Install all packages found in /mnt
+RUN for pkg in /mnt/*; do \
+  if [ -d "$pkg" ] && [ -f "$pkg/setup.py" -o -f "$pkg/pyproject.toml" ]; then \
+  pip install -e "$pkg"; \
+  fi; \
+  done
 
 # We install edx-platform here because it creates an egg-info folder in the current
 # repo. We need both the source code and the virtualenv to run this command.
