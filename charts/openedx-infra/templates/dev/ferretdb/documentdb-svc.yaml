@@ -1,0 +1,21 @@
+{{- if and .Values.ferretdb.enabled .Values.project.local.enableNodePorts -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: documentdb-nodeport
+  labels:
+    app.kubernetes.io/component: database
+    app.kubernetes.io/instance: openedx
+    app.kubernetes.io/name: documentdb
+
+spec:
+  type: NodePort
+  ports:
+  - name: nodeport-documentdb
+    nodePort: 30437
+    port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    cnpg.io/cluster: documentdb-cluster
+{{- end -}}
