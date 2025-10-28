@@ -212,7 +212,7 @@ data:
     EDXNOTES_INTERNAL_API = f"http://{os.environ['NOTES_SERVICE_HOST']}:{os.environ['NOTES_SERVICE_PORT']}/api/v1"
 
     {{- if .Values.openedx.lms.extraDjangoSettings }}
-    {{ .Values.openedx.lms.extraDjangoSettings }}
+    {{ .Values.openedx.lms.extraDjangoSettings | nindent 4 }}
     {{- end }}
 
 {{- end -}}

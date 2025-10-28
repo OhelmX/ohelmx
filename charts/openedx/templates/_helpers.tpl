@@ -714,9 +714,6 @@ FORUM_MONGODB_CLIENT_PARAMETERS["username"] = os.environ["DOCUMENTDB_USERNAME"]
 # Student notes
 FEATURES["ENABLE_EDXNOTES"] = True
 
-# FIXME: deleted MAIN
-# DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
-# FIXME: added MAIN
 STORAGES['default']['BACKEND'] = "storages.backends.s3boto3.S3Boto3Storage"
 VIDEO_IMAGE_SETTINGS["STORAGE_KWARGS"]["location"] = VIDEO_IMAGE_SETTINGS["STORAGE_KWARGS"]["location"].lstrip("/")
 VIDEO_TRANSCRIPTS_SETTINGS["STORAGE_KWARGS"]["location"] = VIDEO_TRANSCRIPTS_SETTINGS["STORAGE_KWARGS"]["location"].lstrip("/")

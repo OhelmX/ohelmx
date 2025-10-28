@@ -76,7 +76,7 @@ data:
     CSRF_TRUSTED_ORIGINS.append(f"https://{MFE_HOST}")
 
     {{- if .Values.openedx.cms.extraDjangoSettings }}
-    {{ .Values.openedx.cms.extraDjangoSettings }}
+    {{ .Values.openedx.cms.extraDjangoSettings | nindent 4 }}
     {{- end }}
 
 

@@ -240,6 +240,10 @@ minio:
       - name: public
         versioning: true
         public: true
+    extraBuckets: []
+      # example:
+      # - name: extra-bucket
+      #   versioning: false
 
   # see https://github.com/minio/operator/blob/master/helm/tenant/templates/tenant.yaml
   tenant:
