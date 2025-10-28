@@ -814,6 +814,7 @@ Shared notes environment variables
 Common dev startup script for installing CA and editable packages
 */}}
 {{- define "openedx.dev.startupScript" -}}
+{{- if .Values.openedx.isDev }}
 # Install custom CA into certifi bundle for Python requests/botocore
 CERTIFI_BUNDLE=$(python -c "import certifi; print(certifi.where())")
 if [ -f "$CERTIFI_BUNDLE" ] && [ -f /etc/ssl/certs/ca-certificates.crt ]; then
@@ -821,19 +822,22 @@ if [ -f "$CERTIFI_BUNDLE" ] && [ -f /etc/ssl/certs/ca-certificates.crt ]; then
   grep -A 100 "BEGIN CERTIFICATE" /usr/local/share/ca-certificates/mkcert-ca.crt >> "$CERTIFI_BUNDLE" || true
 fi
 
+{{- if .Values.openedx.local.src }}
 # Install editable packages from /mnt
 for dir in /mnt/*; do
   if [ -d "$dir" ] && [ -f "$dir/setup.py" ]; then
     pip install -e "$dir"
   fi
 done
+{{- end }}
+{{- end }}
 {{- end -}}
 
 {{/*
 Shared dev volume mounts
 */}}
 {{- define "openedx.dev.volumeMounts" -}}
-{{- if and .Values.openedx.isDev .Values.openedx.local.srcFrom }}
+{{- if and .Values.openedx.isDev .Values.openedx.local.src }}
 - name: edx-platform
   mountPath: /openedx/edx-platform
 - name: mnt
@@ -845,7 +849,7 @@ Shared dev volume mounts
 Shared dev volumes
 */}}
 {{- define "openedx.dev.volumes" -}}
-{{- if and .Values.openedx.isDev .Values.openedx.local.srcFrom }}
+{{- if and .Values.openedx.isDev .Values.openedx.local.src }}
 - name: edx-platform
   hostPath:
     path: /openedx/edx-platform

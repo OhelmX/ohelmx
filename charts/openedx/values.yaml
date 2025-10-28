@@ -8,7 +8,6 @@ global:
 project:
   local:
     enableNodePorts: false
-    rootPath: /openedx
 
 # Common labels and annotations
 commonLabels:
@@ -52,7 +51,7 @@ openedx:
     # WARNING: this path will be inside the k3d container if using k3d, not your host machine,
     # so if you want to use your host machine path, you need to mount it in k3d first at cluster creation time!
     # This will be done automatically if using the ok3dx scripts
-    srcFrom: ""
+    src: true
 
   # SMTP settings
   smtp:
