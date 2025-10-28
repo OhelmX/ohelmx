@@ -12,6 +12,8 @@ if [ -z "$USERNAME" ] || [ -z "$EMAIL" ]; then
   exit 1
 fi
 
+kubectl config use-context k3d-${CLUSTERNAME}
+
 echo "Creating staff superuser ${USERNAME} with email ${EMAIL}."
 
 echo -n "Enter your password for the new user: "

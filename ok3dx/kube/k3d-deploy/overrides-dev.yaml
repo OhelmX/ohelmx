@@ -2,7 +2,7 @@
 # Coordinate changes here with changes to ./infra.yaml that get applied to the openedx-infra chart for k3d/dev
 
 openedx:
-  isDev: false
+  isDev: true
   local:
     # if set and `isDev: true`, will mount a volume from this path (useful for local development)
     # WARNING: this path will be inside the k3d container if using k3d, not your host machine,

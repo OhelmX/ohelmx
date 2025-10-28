@@ -13,6 +13,8 @@ if [ -f "${SCRIPT_DIR}/overrides-infra-local.yaml" ]; then
   EXTRA_VALUES="--values ${SCRIPT_DIR}/overrides-infra-local.yaml"
 fi
 
+kubectl config use-context k3d-${CLUSTERNAME}
+
 LB_IP=$(docker network inspect k3d-${CLUSTERNAME} | jq -r ".[].Containers[] | select(.Name == \"k3d-${CLUSTERNAME}-serverlb\") | .IPv4Address | split(\"/\")[0]")
 BACKUPS_LB_IP=$(docker network inspect k3d-${CLUSTERNAME} | jq -r ".[].Containers[] | select(.Name == \"k3d-${BACKUPS_CLUSTERNAME}-serverlb\") | .IPv4Address | split(\"/\")[0]")
 

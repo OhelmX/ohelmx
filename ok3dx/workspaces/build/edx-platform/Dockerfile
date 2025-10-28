@@ -67,6 +67,7 @@ FROM python AS python-requirements
 ENV PATH=/openedx/venv/bin:${PATH}
 ENV VIRTUAL_ENV=/openedx/venv/
 ENV XDG_CACHE_HOME=/openedx/.cache
+ARG EDX_EXTRA_PACKAGES=""
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
   --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -108,6 +109,8 @@ RUN --mount=type=cache,target=/openedx/.cache/pip,sharing=shared \
 RUN pip install "openedx-scorm-xblock>=19.0.0,<20.0.0"
 
 
+RUN --mount=type=cache,target=/openedx/.cache/pip,sharing=shared \
+  pip install $EDX_EXTRA_PACKAGES
 
 
 

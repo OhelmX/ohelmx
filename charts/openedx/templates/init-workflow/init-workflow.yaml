@@ -159,7 +159,6 @@ spec:
           set -e
           cd /openedx/edx-platform
           echo "Creating Meilisearch api key..."
-
           ./manage.py lms shell -c "
           import os
           import meilisearch
@@ -230,6 +229,14 @@ spec:
 
           echo "Loading settings $DJANGO_SETTINGS_MODULE"
 
+          {{- if .Values.openedx.isDev }}
+          for dir in /mnt/*; do
+            if [ -d "$dir" ] && [ -f "$dir/setup.py" ]; then
+              pip install -e "$dir"
+            fi
+          done
+          {{- end }}
+
           ./manage.py lms migrate
 
           # Create meilisearch indexes
@@ -292,6 +299,14 @@ spec:
           cd /openedx/edx-platform
 
           echo "Loading settings $DJANGO_SETTINGS_MODULE"
+
+          {{- if .Values.openedx.isDev }}
+          for dir in /mnt/*; do
+            if [ -d "$dir" ] && [ -f "$dir/setup.py" ]; then
+              pip install -e "$dir"
+            fi
+          done
+          {{- end }}
 
           ./manage.py cms migrate
 

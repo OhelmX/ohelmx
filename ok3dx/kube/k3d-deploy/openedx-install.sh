@@ -13,6 +13,8 @@ if [ -f "${SCRIPT_DIR}/overrides-local.yaml" ]; then
   EXTRA_VALUES="--values ${SCRIPT_DIR}/overrides-local.yaml"
 fi
 
+kubectl config use-context k3d-${CLUSTERNAME}
+
 helm upgrade --install ${APPNAME} --namespace ${NAMESPACE} --create-namespace ${CHART_REPO} \
   --values ${SCRIPT_DIR}/overrides-dev.yaml ${EXTRA_VALUES}
 
