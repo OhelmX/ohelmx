@@ -221,7 +221,7 @@ openedx:
     bookUrl: ""
     image:
       repository: ghcr.io/ohelmx/openedx
-      tag: "20.0.1-main-indigo-ok3dx.2"
+      tag: "20.0.1-main-indigo-ok3dx.8"
       pullPolicy: IfNotPresent
       pullSecrets: []
         # - name: my-registry-secret
@@ -267,7 +267,7 @@ openedx:
     bookUrl: ""
     image:
       repository: ghcr.io/ohelmx/openedx
-      tag: "20.0.1-main-indigo-ok3dx.2"
+      tag: "20.0.1-main-indigo-ok3dx.8"
       pullPolicy: IfNotPresent
       pullSecrets: []
   preview:

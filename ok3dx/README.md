@@ -4,7 +4,8 @@ A Kubernetes `k3d` and `Helm` development environment and deployment tool for Op
 
 ## STATUS - pre-alpha
 
-[!WARNING] 2025-10-04 - the current setup requires code (postgres support) that has not yet been merged to the official Open edX repos. As such, it requires installing container images from non-official sources (`ghcr.io/ohelmx/openedx` and `ghcr.io/ohelmx/openedx-notes`). Support is based off `master`, NOT an official release. Unless you like living on the edge, you are probably better waiting for that code to be merged and for a proper upstream release.
+> [!WARNING]
+> 2025-10-04 the current setup requires code (postgres support) that has not yet been merged to the official Open edX repos. As such, it requires installing container images from non-official sources (`ghcr.io/ohelmx/openedx` and `ghcr.io/ohelmx/openedx-notes`). Support is based off `master`, NOT an official release. Unless you like living on the edge, you are probably better waiting for that code to be merged and for a proper upstream release.
 
 ## Founding concepts
 
@@ -80,7 +81,8 @@ The system also relies on the following services, currently installed with `k3d`
 
 ## Dev deployment
 
-[!NOTE] all commands should be executed from the directory that contains the `vars.sh.default` file (should be the same as this `README`)
+> [!NOTE]
+> All commands after the clone should be executed from the directory that contains the `vars.sh.default` file (should be the same as this `README`)
 
 Init your workstation setup:
 
@@ -97,21 +99,21 @@ If your personalisation needs are more substantial, you could copy this repo's `
 ### Cluster init
 
 ```bash
-bash kube/k3d-deploy/k3d-create-cluster.sh && bash kube/k3d-deploy/kubectl-create-secret.sh
+bash kube/k3d-deploy/k3d-create-ok3dx-backups-cluster.sh && kube/k3d-deploy/k3d-create-ok3dx-cluster.sh && bash kube/k3d-deploy/openedx-create-secrets.sh
 ```
 
 ### Cluster operator and infra provisioning
 
 ```bash
-bash kube/k3d-deploy/pre-install.sh
-bash kube/k3d-deploy/kubectl-create-tls.sh
+bash kube/k3d-deploy/openedx-pre-install.sh && bash kube/k3d-deploy/kubectl-create-tls.sh
 ```
 
 ### Reinstall `openedx-infra`
 
-[!NOTE] The `pre-install.sh` script above installs the openedx-infra chart, so the following is only necessary if you want to redeploy just `openedx-infra` for some reason.
+> [!NOTE]
+> The `openedx-pre-install.sh` script above installs the openedx-infra chart, so the following is only necessary if you want to redeploy just `openedx-infra` for some reason.
 
-```
+```bash
 bash kube/k3d-deploy/openedx-infra-install.sh
 ```
 
@@ -123,7 +125,8 @@ bash kube/k3d-deploy/openedx-install.sh
 
 ### Init openedx dbs/resources
 
-[!NOTE] The following can take 20+ minutes, but is only required once.
+> [!NOTE]
+> The following can take 20+ minutes, but is only required once.
 
 ```bash
 bash kube/k3d-deploy/openedx-init.sh
@@ -132,8 +135,7 @@ bash kube/k3d-deploy/openedx-init.sh
 Show init progress - requires `argo`, see below:
 
 ```bash
-source vars.sh
-argo logs -f @latest
+source vars.sh && argo logs -f @latest
 ```
 
 ### Access the services
@@ -151,7 +153,8 @@ You should now be able to access the sites on their normal dev-local URLs - http
 
 ### Launch realtime backups baselines
 
-[!NOTE] requires the `cnpg` kubectl plugin, see below:
+> [!NOTE]
+> Requires the `cnpg` kubectl plugin, see below:
 
 ```bash
 source vars.sh
@@ -194,7 +197,8 @@ A key difference in philosophy with Tutor is that DevOps engineers should be in 
 
 If you are not comfortable with Helm (or at least want to be), you should probably stick with Tutor.
 
-[!WARNING] The default dev secrets (in `kube/k3d-deploy/secrets/ok3dx*`) *ARE NOT SUITABLE FOR PRODUCTION*. They are all basically some variant of "password". This is great for dev but not great for prod. The YAML secret files contain annotations which allow them to be reliably regenerated using basically identical code to Tutor via the python script `kube/k8s-deploy/regen-secrets.py`. Basically you just run that script (which needs either python's `pycryptodome` to be available to python, or linux's command line `openssl` to be available to the CL) with the `kube/k3d-deploy/secrets` directory as the first parameter and an output directory as the second and then you will have 3 directories you *CAN* `kubectl apply -f ...` to production, then properly manage with your secrets-management system.
+> [!WARNING]
+> The default dev secrets (in `kube/k3d-deploy/secrets/ok3dx*`) *ARE NOT SUITABLE FOR PRODUCTION*. They are all basically some variant of "password". This is great for dev but not great for prod. The YAML secret files contain annotations which allow them to be reliably regenerated using basically identical code to Tutor via the python script `kube/k8s-deploy/regen-secrets.py`. Basically you just run that script (which needs either python's `pycryptodome` to be available to python, or linux's command line `openssl` to be available to the CL) with the `kube/k3d-deploy/secrets` directory as the first parameter and an output directory as the second and then you will have 3 directories you *CAN* `kubectl apply -f ...` to production, then properly manage with your secrets-management system.
 
 ### Recommended extras
 
@@ -202,7 +206,8 @@ If you are not comfortable with Helm (or at least want to be), you should probab
 
 ```bash
 ARGO_OS="linux"
-curl -sLO "https://github.com/argoproj/argo-workflows/releases/download/v3.7.2/argo-$ARGO_OS-amd64.gz"
+ARGO_VERSION="v3.7.3"
+curl -sLO "https://github.com/argoproj/argo-workflows/releases/download/$ARGO_VERSION/argo-$ARGO_OS-amd64.gz"
 gunzip "argo-$ARGO_OS-amd64.gz"
 chmod +x "argo-$ARGO_OS-amd64"
 mv "./argo-$ARGO_OS-amd64" ~/bin/argo
@@ -211,14 +216,13 @@ mv "./argo-$ARGO_OS-amd64" ~/bin/argo
 #### kubectl cnpg plugin
 
 ```bash
-wget https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v1.27.0/kubectl-cnpg_1.27.0_linux_x86_64.deb
-sudo apt install ./kubectl-cnpg_1.27.0_linux_x86_64.deb
-rm kubectl-cnpg_1.27.0_linux_x86_64.deb
+CNPG_VERSION="1.27.1"
+wget https://github.com/cloudnative-pg/cloudnative-pg/releases/download/v${CNPG_VERSION}/kubectl-cnpg_${CNPG_VERSION}_linux_x86_64.deb
+sudo apt install ./kubectl-cnpg_${CNPG_VERSION}_linux_x86_64.deb
+rm kubectl-cnpg_${CNPG_VERSION}_linux_x86_64.deb
 ```
 
 # TODOs
-- finish trying to get local volumes working for operators/meili
-- Email!
 - integrate a proper secrets manager (SOPS?) for gitops
 - integrate CI/CD
   - Argo?
@@ -226,6 +230,6 @@ rm kubectl-cnpg_1.27.0_linux_x86_64.deb
 
 # Relationship to Edly Tutor
 
-The Open edX community has decided to focus on Tutor and in many key repos (such as `openedx/edx-platform`) is no longer maintaining documentation to ensure competent developers can use the code/projects independently, instead choosing to delegate that to Tutor Just Working. If it works as a whole, you don't need documentation for the individual bits I guess is the rationale. As such, in 2025, there is no practical way to create a working Open edX platform in a tractable amount of time without reverse engineering how Tutor sets up and builds things, at least to a certain extent. So that was done. In the process a reasonable amount of code was copied, including the `indigo` theme and most of a `tutor`-produced local `build` directory. Some utility code was copied, particularly for generating passwords (see `ok3dx/kube/k8s-deploy/regen_secrets.py`).
+The Open edX community has decided to focus on Tutor and in many key repos (such as `openedx/edx-platform`) is no longer maintaining documentation to ensure competent developers can use the code/projects independently, instead choosing to delegate that to Tutor Just Working. If it works as a whole, you don't need documentation for the individual bits, I guess is the rationale. As such, in 2025, there is no practical way to create a working Open edX platform in a tractable amount of time without reverse engineering how Tutor sets up and builds things, at least to a certain extent. So that was done. In the process a reasonable amount of code was copied, including the `indigo` theme and most of a `tutor`-produced local `build` directory. Some utility code was copied, particularly for generating passwords (see `ok3dx/kube/k8s-deploy/regen_secrets.py`).
 
 That said, Tutor does a lot of templating so plugins can inject code not only runtime config, but also build code/config fragments. That makes it very flexible and powerful. Also very complicated to reason about and ensure the stability and security of - unless maybe you have a technical PhD. At the very least it means you need to spend significant amounts of time and resources to become familiar with it, rather than a more widely used tool, like `helm`. While Tutor relies on a standard templating language and `kustomize` for deploying to Kubernetes, it is very much "black-box" in its approach. This project takes a different approach - use parameters and (environment) variables over templating, and additional building rather than trying to monolith it. Tutor has had many years to perfect its approach, so clearly has far more rounded edges and features. Stay tuned to this repo for more, and don't hesitate to submit PRs if you create some useful addtions!
