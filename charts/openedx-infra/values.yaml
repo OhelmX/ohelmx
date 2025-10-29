@@ -62,6 +62,7 @@ db:
         key: password
 
   cluster:
+    enabled: true
     name: db-cluster
     instances: 1
     image:
@@ -139,6 +140,7 @@ ferretdb:
         key: password
 
   cluster:
+    enabled: true
     name: documentdb-cluster
     instances: 1
     image:

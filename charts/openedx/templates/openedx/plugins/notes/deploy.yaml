@@ -9,7 +9,7 @@ metadata:
     {{- include "openedx.componentLabels" (dict "component" "notes" "root" .) | nindent 4 }}
 spec:
   progressDeadlineSeconds: {{ .Values.openedx.notes.progressDeadlineSeconds | default 600 }}
-  replicas: {{ .Values.openedx.notes.replicas | default 1 }}
+  replicas: {{ if hasKey .Values.openedx.notes "replicas" }}{{ .Values.openedx.notes.replicas }}{{ else }}1{{ end }}
   revisionHistoryLimit: {{ .Values.openedx.notes.revisionHistoryLimit | default 10 }}
 
   selector:

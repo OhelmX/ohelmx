@@ -9,7 +9,7 @@ metadata:
     {{- include "openedx.componentLabels" (dict "component" "cms-worker" "root" .) | nindent 4 }}
 spec:
   progressDeadlineSeconds: {{ .Values.openedx.cmsWorker.progressDeadlineSeconds | default 600 }}
-  replicas: {{ .Values.openedx.cmsWorker.replicas | default 1 }}
+  replicas: {{ if hasKey .Values.openedx.cmsWorker "replicas" }}{{ .Values.openedx.cmsWorker.replicas }}{{ else }}1{{ end }}
   revisionHistoryLimit: {{ .Values.openedx.cmsWorker.revisionHistoryLimit | default 10 }}
 
   selector:
