@@ -1,4 +1,5 @@
 {{- if and .Values.minio.enabled .Values.minio.extendedOperator.user -}}
+{{- $allBuckets := concat .Values.minio.extendedOperator.buckets (.Values.minio.extendedOperator.extraBuckets | default list) -}}
 apiVersion: bfiola.dev/v1
 kind: MinioPolicy
 metadata:
@@ -16,7 +17,7 @@ spec:
         - "s3:ListBucket"
         - "s3:GetBucketLocation"
       resource:
-{{- range .Values.minio.extendedOperator.buckets }}
+{{- range $allBuckets }}
         - "arn:aws:s3:::{{ .name }}/*"
 {{- end }}
     - effect: "Allow"
@@ -26,7 +27,7 @@ spec:
         - "s3:ListBucketMultipartUploads"
         - "s3:ListenBucketNotification"
       resource:
-{{- range .Values.minio.extendedOperator.buckets }}
+{{- range $allBuckets }}
         - "arn:aws:s3:::{{ .name }}"
 {{- end }}
 
