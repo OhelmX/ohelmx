@@ -22,16 +22,13 @@ fi
 
 # create the docker network if not present
 # This is required to reduce the MTU in cases where using a VPN (namely wireguard)
-NETWORK=k3d-${CLUSTERNAME}
 EXISTING_NETWORK=$(docker network ls | grep " ${NETWORK} ")
 if [ -z "${EXISTING_NETWORK}" ]; then
   echo "Network ${NETWORK} not found, creating"
   docker network create --opt com.docker.network.driver.mtu=1400 ${NETWORK}
-  # docker network create --opt com.docker.network.driver.mtu=1400 --driver bridge --subnet 172.18.0.0/24 --gateway 172.18.0.1 ${NETWORK}
+  # docker network create --opt com.docker.network.driver.mtu=1400 --driver bridge --subnet 172.18.0.0/24 \
+  #   --gateway 172.18.0.1 ${NETWORK}
 fi
-
-# make sure no other cluster is running
-# k3d cluster stop --all
 
 if [ -z "${K3S_IMAGE_NAME}" ]; then
   K3S_IMAGE="--image docker.io/rancher/k3s:v1.34.1-k3s1"
@@ -46,9 +43,17 @@ mkdir -p ~/.kube
 k3d cluster create ${BACKUPS_CLUSTERNAME} --config ${SCRIPT_DIR}/k3d-backups-config.yml \
   ${K3S_IMAGE} --network ${NETWORK}
 k3d kubeconfig merge ${BACKUPS_CLUSTERNAME} --output ${KUBECONFIG}
-kubectl --kubeconfig ${KUBECONFIG} config set-context k3d-${BACKUPS_CLUSTERNAME} --namespace=${BACKUPS_NAMESPACE}
+kubectl --kubeconfig ${KUBECONFIG} config set-context ${BACKUPS_CONTEXT} --namespace=${BACKUPS_NAMESPACE}
 
 # dockerhub and some other sites can be extremely slow over ipv6 in certain situations
-docker exec -i k3d-${BACKUPS_CLUSTERNAME}-server-0 sysctl -w net.ipv6.conf.all.disable_ipv6=1
+docker exec -i ${BACKUPS_CONTEXT}-server-0 sysctl -w net.ipv6.conf.all.disable_ipv6=1
+
+echo -e "apiVersion: v1\nkind: Namespace\nmetadata:\n  name: ${BACKUPS_NAMESPACE}" | kubectl \
+  --context ${BACKUPS_CONTEXT} apply -f -
+kubectl --context ${BACKUPS_CONTEXT} -n ${BACKUPS_NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/openedx-backups/
+kubectl --context ${BACKUPS_CONTEXT} -n ${BACKUPS_NAMESPACE} apply -f ${SCRIPT_DIR}/secrets/openedx-shared/
+
+helmfile --kube-context ${BACKUPS_CONTEXT} -f ${SCRIPT_DIR}/../helmfile/helmfile-backups.yaml.gotmpl --environment dev \
+  sync --include-transitive-needs
 
 echo "Cluster ${BACKUPS_CLUSTERNAME} created successfully"

@@ -7,24 +7,16 @@ SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 source ${SCRIPT_DIR}/../../vars.sh
 echo "Installing helm charts for ${APPNAME}-infra in namespace ${NAMESPACE}"
 
-# Check for additional values file
-EXTRA_VALUES=""
-if [ -f "${SCRIPT_DIR}/overrides-infra-local.yaml" ]; then
-  EXTRA_VALUES="--values ${SCRIPT_DIR}/overrides-infra-local.yaml"
-fi
+export LB_IP=$(docker network inspect ${NETWORK} | jq -r ".[].Containers[] | select(.Name == \"k3d-${CLUSTERNAME}-serverlb\") | .IPv4Address | split(\"/\")[0]")
+export GATEWAY_IP=$(docker network inspect ${NETWORK} | jq -r ".[].IPAM.Config[0].Gateway")
+export BACKUPS_LB_IP=$(docker network inspect ${NETWORK} | jq -r ".[].Containers[] | select(.Name == \"k3d-${BACKUPS_CLUSTERNAME}-serverlb\") | .IPv4Address | split(\"/\")[0]")
+export MINIO_HOST=files.${LOCALHOST_NAME}
+export BACKUPS_HOST=backups.${LOCALHOST_NAME}
 
-kubectl config use-context k3d-${CLUSTERNAME}
+echo "Load balancer IP address detected: ${LB_IP}, backups LB IP: ${BACKUPS_LB_IP}"
 
-LB_IP=$(docker network inspect k3d-${CLUSTERNAME} | jq -r ".[].Containers[] | select(.Name == \"k3d-${CLUSTERNAME}-serverlb\") | .IPv4Address | split(\"/\")[0]")
-BACKUPS_LB_IP=$(docker network inspect k3d-${CLUSTERNAME} | jq -r ".[].Containers[] | select(.Name == \"k3d-${BACKUPS_CLUSTERNAME}-serverlb\") | .IPv4Address | split(\"/\")[0]")
-
-helm upgrade --install ${APPNAME}-infra --namespace ${NAMESPACE} --create-namespace ${CHART_REPO}-infra \
-  --values ${SCRIPT_DIR}/overrides-infra.yaml --values ${SCRIPT_DIR}/overrides-infra-dev.yaml ${EXTRA_VALUES} \
-  --set openedx.dev.files.lbIP=${LB_IP} \
-  --set openedx.dev.backups.lbIP=${BACKUPS_LB_IP} \
-
-# Restart coredns to pick up any changes to the configmap
-kubectl -n kube-system rollout restart deployment coredns
+helmfile --kubeconfig ${KUBECONFIG} --kube-context ${MAIN_CONTEXT} --environment dev \
+  -f ${SCRIPT_DIR}/../helmfile/helmfile-cluster-infra.yaml.gotmpl sync --include-transitive-needs
 
 echo '---'
 echo "Helm charts installed for ${APPNAME}-infra in namespace ${NAMESPACE}"

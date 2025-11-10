@@ -62,6 +62,7 @@ spec:
             --app=cms.celery \
             worker \
             --loglevel={{ .Values.openedx.cmsWorker.loglevel | default "info" }} \
+            --concurrency={{ .Values.openedx.cmsWorker.concurrency | default 2 }} \
             --max-tasks-per-child=100 \
             --prefetch-multiplier=1 \
             --without-gossip \
@@ -79,7 +80,8 @@ spec:
         - celery
         - --app=cms.celery
         - worker
-        - --loglevel=info
+        - --loglevel={{ .Values.openedx.cmsWorker.loglevel | default "info" }}
+        - --concurrency={{ .Values.openedx.cmsWorker.concurrency | default 2 }}
         - --max-tasks-per-child=100
         - --prefetch-multiplier=1
         - --without-gossip

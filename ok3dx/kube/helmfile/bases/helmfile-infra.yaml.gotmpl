@@ -1,0 +1,44 @@
+environments:
+  default:
+  dev:
+  production:
+---
+repositories:
+- name: meilisearch
+  url: https://meilisearch.github.io/meilisearch-kubernetes
+- name: ot-helm
+  url: https://ot-container-kit.github.io/helm-charts/
+
+releases:
+- name: redis-operator
+  namespace: ot-operators
+  wait: true
+  waitForJobs: true
+  chart: ot-helm/redis-operator
+  version: 0.22.2
+
+- name: openedx-infra
+  needs:
+  - ot-operators/redis-operator
+  namespace: openedx
+  chart: ../../../charts/openedx-infra
+  version: 0.1.0
+  wait: true
+  waitForJobs: true
+
+  values:
+  - ./values/overrides-infra.yaml
+  {{ if (eq .Environment.Name "dev") }}
+  - ./values/overrides-infra-dev.yaml
+  {{ end }}
+  {{- if isFile "./values/overrides-infra-local.yaml" }}
+  - ./values/overrides-infra-local.yaml
+  {{- end }}
+  {{ if (eq .Environment.Name "dev") }}
+  set:
+    - name: openedx.dev.files.lbIP
+      value: {{ requiredEnv "LB_IP" }}
+    - name: openedx.dev.backups.lbIP
+      value: {{ requiredEnv "BACKUPS_LB_IP" }}
+
+  {{ end }}

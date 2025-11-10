@@ -1,0 +1,5 @@
+traefik: &traefik
+  name: traefik
+  namespace: traefik
+  chart: oci://ghcr.io/traefik/helm/traefik
+  version: 37.3.0

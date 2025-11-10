@@ -19,7 +19,7 @@ spec:
     solvers:
     - http01:
         ingress:
-          class: traefik
+          class: {{ $issuer.ingressClass | default "traefik" }}
 {{ end }}
 {{ end }}
 {{ end }}

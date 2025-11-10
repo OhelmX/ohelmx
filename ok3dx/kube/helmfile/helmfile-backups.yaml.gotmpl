@@ -1,0 +1,46 @@
+environments:
+  default:
+  dev:
+  production:
+---
+
+templates:
+{{ readFile "./blocks/minio-tmpl.yaml" | indent 2 }}
+
+releases:
+  - <<: *minio-operator
+  - <<: *minio-operator-ext-crds
+  - <<: *minio-operator-ext-operator
+  - name: minio-backups
+    namespace: backups
+    chart: ../../charts/transcrobes-backups
+    version: 0.1.0
+    wait: true
+    waitForJobs: true
+    needs:
+    - minio-operator/minio-operator
+    - minio-operator/minio-operator-ext-crds
+    - minio-operator/minio-operator-ext-operator
+    values:
+    - ./values/overrides-backups-dev.yaml
+    {{- if isFile "./values/overrides-backups-local.yaml" }}
+    - ./values/overrides-backups-local.yaml
+    {{- end }}
+
+- name: minio-backups
+  namespace: backups
+  chart: ../../../charts/openedx-backups
+  version: 0.1.0
+  wait: true
+  waitForJobs: true
+  needs:
+  - minio-operator/minio-operator
+  - minio-operator/minio-operator-ext-crds
+  - minio-operator/minio-operator-ext-operator
+  values:
+  {{ if (eq .Environment.Name "dev") }}
+  - ./overrides-backups-dev.yaml
+  {{ end }}
+  {{- if isFile "./overrides-backups-local.yaml" }}
+  - ./overrides-backups-local.yaml
+  {{- end }}

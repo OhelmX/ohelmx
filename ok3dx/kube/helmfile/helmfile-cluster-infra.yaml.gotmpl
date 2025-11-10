@@ -1,0 +1,41 @@
+environments:
+  default:
+  dev:
+  production:
+---
+
+repositories:
+- name: minio-operator
+  url: https://operator.min.io/
+- name: minio-operator-ext
+  url: https://benfiola.github.io/minio-operator-ext/charts
+
+helmDefaults:
+  wait: true
+  waitForJobs: true
+
+templates:
+{{ readFile "blocks/argo-tmpl.yaml" | indent 2 }}
+{{ readFile "blocks/cert-manager-tmpl.yaml" | indent 2 }}
+{{ readFile "blocks/cnpg-tmpl.yaml" | indent 2 }}
+{{ readFile "blocks/coredns-tmpl.yaml" | indent 2 }}
+{{ readFile "blocks/traefik-tmpl.yaml" | indent 2 }}
+{{ readFile "blocks/minio-tmpl.yaml" | indent 2 }}
+
+releases:
+  - <<: *minio-operator
+  - <<: *minio-operator-ext-crds
+  - <<: *minio-operator-ext-operator
+  - <<: *argo
+    values:
+      - "./values/argo-values.yaml"
+  - <<: *cert-manager
+  - <<: *trust-manager
+  - <<: *cnpg
+  - <<: *plugin-barman-cloud
+  - <<: *traefik
+    values:
+      - "./values/traefik-values.yaml"
+  - <<: *coredns
+    values:
+      - "./values/coredns-dev.yaml.gotmpl"

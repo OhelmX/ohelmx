@@ -1,0 +1,5 @@
+coredns: &coredns
+  name: coredns
+  namespace: kube-system
+  chart: oci://ghcr.io/coredns/charts/coredns
+  version: 1.45.0

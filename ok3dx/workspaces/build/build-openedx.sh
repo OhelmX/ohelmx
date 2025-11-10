@@ -40,7 +40,7 @@ GITHUB_REPO=edx-platform
 
 echo "Building and pushing images for ${APPNAME} to ${CONTAINER_REF}"
 
-docker build --tag=${CONTAINER_REF}:${TAG} --output=type=docker \
-  --build-context=edx-platform=${$EDX_PLATFORM_DIRECTORY} ${SCRIPT_DIR}/${GITHUB_REPO}
+docker build --progress=plain --tag=${CONTAINER_REF} --output=type=docker \
+  --build-context=edx-platform=${EDX_PLATFORM_DIRECTORY} ${SCRIPT_DIR}/${GITHUB_REPO}
 
 docker push ${CONTAINER_REF}

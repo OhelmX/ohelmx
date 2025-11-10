@@ -1,0 +1,36 @@
+service:
+  enabled: true
+  clusterIP: 10.43.0.10
+servers:
+  # Custom server block for dev environment DNS overrides
+  - zones:
+    - zone: .
+      use_tcp: true
+    port: 53
+    plugins:
+    # Add custom hosts before other plugins
+    - name: errors
+    - name: health
+      configBlock: |-
+        lameduck 12s
+    - name: ready
+    - name: hosts
+      configBlock: |-
+        {{ env "LB_IP" | required "LB_IP environment variable is required" }} {{ env "MINIO_HOST" | default "minio.localhost" }}
+        {{ env "BACKUPS_LB_IP" | required "BACKUPS_LB_IP environment variable is required" }} {{ env "BACKUPS_HOST" | default "backups.localhost" }}
+        fallthrough
+    - name: kubernetes
+      parameters: cluster.local in-addr.arpa ip6.arpa
+      configBlock: |-
+        pods insecure
+        fallthrough in-addr.arpa ip6.arpa
+        ttl 30
+    - name: prometheus
+      parameters: 0.0.0.0:9153
+    - name: forward
+      parameters: . /etc/resolv.conf
+    - name: cache
+      parameters: 30
+    - name: loop
+    - name: reload
+    - name: loadbalance

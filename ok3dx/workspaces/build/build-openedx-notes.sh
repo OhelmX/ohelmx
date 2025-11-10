@@ -31,6 +31,7 @@ if [ -z "$TAG" ]; then
   echo "Error: --tag parameter is required"
   exit 1
 fi
+
 CONTAINER_REF=${CONTAINER_REGISTRY}/openedx-notes:${TAG}
 GITHUB_REPO=edx-notes-api
 

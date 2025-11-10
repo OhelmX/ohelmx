@@ -59,6 +59,12 @@ options:
       - arg: "--tls-san=127.0.0.1"
         nodeFilters:
           - server:*
+      - arg: "--disable=traefik"
+        nodeFilters:
+          - server:*
+      - arg: "--disable=coredns"
+        nodeFilters:
+          - server:*
 
   kubeconfig:
     updateDefaultKubeconfig: false

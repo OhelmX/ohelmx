@@ -1,0 +1,31 @@
+providers:
+  kubernetesCRD:
+    allowExternalNameServices: true
+  kubernetesGateway:
+    enabled: true
+gateway:
+  enabled: false  # Disable default Gateway
+ports:
+  web:
+    port: 80
+    # transport:
+    #   respondingTimeouts:
+    #     readTimeout: 120s
+    #     writeTimeout: 120s
+  websecure:
+    port: 443
+    transport:
+      respondingTimeouts:
+        readTimeout: 300s
+        writeTimeout: 300s
+
+# Increase timeouts for long-running requests
+additionalArguments:
+  - "--serversTransport.forwardingTimeouts.dialTimeout=30s"
+  - "--serversTransport.forwardingTimeouts.responseHeaderTimeout=300s"
+  - "--serversTransport.forwardingTimeouts.idleConnTimeout=180s"
+  # this definitely works
+  # - "--entryPoints.web.transport.respondingTimeouts.readTimeout=300s"
+  # - "--entryPoints.web.transport.respondingTimeouts.writeTimeout=300s"
+  # - "--entryPoints.websecure.transport.respondingTimeouts.readTimeout=300s"
+  # - "--entryPoints.websecure.transport.respondingTimeouts.writeTimeout=300s"

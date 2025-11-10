@@ -20,9 +20,9 @@ minio:
     buckets:
       - name: openedx-storage
         versioning: true
-      - name: db-backups
+      - name: openedx-db-backups
         versioning: false
-      - name: documentdb-backups
+      - name: openedx-documentdb-backups
         versioning: false
 
   tenant:

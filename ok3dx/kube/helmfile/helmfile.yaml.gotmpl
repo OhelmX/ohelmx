@@ -1,0 +1,13 @@
+environments:
+  default:
+  dev:
+  production:
+---
+
+helmDefaults:
+  wait: true
+  waitForJobs: true
+
+bases:
+  - "bases/helmfile-infra.yaml.gotmpl"
+  - "bases/helmfile-openedx.yaml.gotmpl"

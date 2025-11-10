@@ -1,0 +1,28 @@
+minio-operator: &minio-operator
+  name: minio-operator
+  namespace: minio-operator
+  wait: true
+  waitForJobs: true
+  chart: minio-operator/operator
+  # labels: { stack: minio }
+  version: 7.1.1
+
+minio-operator-ext-crds: &minio-operator-ext-crds
+  name: minio-operator-ext-crds
+  namespace: minio-operator
+  wait: true
+  waitForJobs: true
+  chart: minio-operator-ext/crds
+  # labels: { stack: minio }
+  version: 3.3.0-rc.1
+
+minio-operator-ext-operator: &minio-operator-ext-operator
+  name: minio-operator-ext-operator
+  namespace: minio-operator
+  wait: true
+  waitForJobs: true
+  needs:
+  - minio-operator/minio-operator-ext-crds
+  chart: minio-operator-ext/operator
+  # labels: { stack: minio }
+  version: 3.3.0-rc.1

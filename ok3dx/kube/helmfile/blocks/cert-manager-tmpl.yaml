@@ -1,0 +1,24 @@
+cert-manager: &cert-manager
+  name: cert-manager
+  namespace: cert-manager
+  chart: oci://quay.io/jetstack/charts/cert-manager
+  version: v1.19.1
+  set:
+    - name: crds.enabled
+      value: "true"
+    - name: config.apiVersion
+      value: "controller.config.cert-manager.io/v1alpha1"
+    - name: config.kind
+      value: "ControllerConfiguration"
+    - name: config.enableGatewayAPI
+      value: "true"
+
+trust-manager: &trust-manager
+  name: trust-manager
+  namespace: cert-manager
+  chart: oci://quay.io/jetstack/charts/trust-manager
+  version: v0.20.2
+  wait: true
+  waitForJobs: true
+  needs:
+  - cert-manager/cert-manager

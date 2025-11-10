@@ -14,6 +14,10 @@ export ENVIRONMENT=${ENVIRONMENT:-prod}
 export KUBECONFIG=~/.kube/config.k3d
 export CLUSTERNAME=ok3dx
 export BACKUPS_CLUSTERNAME=ok3dx-backups
+export MAIN_CONTEXT=k3d-${CLUSTERNAME}
+export BACKUPS_CONTEXT=k3d-${BACKUPS_CLUSTERNAME}
+export NETWORK=k3d-${CLUSTERNAME}
+
 export CONTAINER_USER_ID=1001
 export K3S_IMAGE_NAME=docker.io/rancher/k3s:v1.34.1-k3s1
 export GIT_VERSION=$(git describe --tags)

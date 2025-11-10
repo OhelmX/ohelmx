@@ -62,6 +62,7 @@ spec:
             --app=lms.celery \
             worker \
             --loglevel={{ .Values.openedx.lmsWorker.loglevel | default "info" }} \
+            --concurrency={{ .Values.openedx.lmsWorker.concurrency | default 2 }} \
             --max-tasks-per-child=100 \
             --prefetch-multiplier=1 \
             --without-gossip \
@@ -80,6 +81,7 @@ spec:
         - --app=lms.celery
         - worker
         - --loglevel={{ .Values.openedx.lmsWorker.loglevel | default "info" }}
+        - --concurrency={{ .Values.openedx.lmsWorker.concurrency | default 2 }}
         - --max-tasks-per-child=100
         - --prefetch-multiplier=1
         - --without-gossip

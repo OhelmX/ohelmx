@@ -12,8 +12,6 @@ if [ -z "$USERNAME" ] || [ -z "$EMAIL" ]; then
   exit 1
 fi
 
-kubectl config use-context k3d-${CLUSTERNAME}
-
 echo "Creating staff superuser ${USERNAME} with email ${EMAIL}."
 
 echo -n "Enter your password for the new user: "
@@ -29,8 +27,8 @@ fi
 echo "---"
 echo "Creating the user, please be patient, this may take a while depending on your servers and connection..."
 
-POD_NAME=$(kubectl get pods -l app.kubernetes.io/component=lms -o jsonpath='{.items[0].metadata.name}')
-kubectl exec -c lms -it ${POD_NAME} -- env DJANGO_SUPERUSER_PASSWORD=${PASSWORD} ./manage.py lms createsuperuser --username ${USERNAME} --email ${EMAIL} --noinput >/dev/null
-kubectl exec -c lms -it ${POD_NAME} -- ./manage.py lms manage_user  --superuser --staff ${USERNAME} ${EMAIL} >/dev/null
+POD_NAME=$(kubectl --kubeconfig ${KUBECONFIG} --context ${MAIN_CONTEXT} -n ${NAMESPACE} get pods -l app.kubernetes.io/component=lms -o jsonpath='{.items[0].metadata.name}')
+kubectl --kubeconfig ${KUBECONFIG} --context ${MAIN_CONTEXT} exec -it ${POD_NAME} -n ${NAMESPACE} -- env DJANGO_SUPERUSER_PASSWORD=${PASSWORD} ./manage.py lms createsuperuser --username ${USERNAME} --email ${EMAIL} --noinput >/dev/null
+kubectl --kubeconfig ${KUBECONFIG} --context ${MAIN_CONTEXT} exec -it ${POD_NAME} -n ${NAMESPACE} -- ./manage.py lms manage_user  --superuser --staff ${USERNAME} ${EMAIL} >/dev/null
 
 echo "User ${USERNAME} created successfully."

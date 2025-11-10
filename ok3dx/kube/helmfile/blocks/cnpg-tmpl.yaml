@@ -1,0 +1,15 @@
+cnpg: &cnpg
+  name: cnpg
+  namespace: cnpg-system
+  chart: oci://ghcr.io/cloudnative-pg/charts/cloudnative-pg
+  version: 0.26.1
+  needs:
+  - cert-manager/cert-manager
+
+plugin-barman-cloud: &plugin-barman-cloud
+  name: plugin-barman-cloud
+  namespace: cnpg-system
+  chart: oci://ghcr.io/cloudnative-pg/charts/plugin-barman-cloud
+  version: 0.3.1
+  needs:
+  - cnpg-system/cnpg

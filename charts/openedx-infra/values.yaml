@@ -47,7 +47,7 @@ db:
     schedule: "0 30 2 * * *"  # At 02:30:00 (UTC) every day
     retention: 7d          # keep 7 backups
     barmanObjectName: s3-store-db
-    destinationPath: "db-backups"
+    destinationPath: "openedx-db-backups"
     host: backups.local.openedx.io
     port: 80
     useSSL: false
@@ -112,7 +112,7 @@ ferretdb:
   application:
     image:
       repository: ghcr.io/ferretdb/ferretdb
-      tag: 2.5.0
+      tag: 2.7.0
       pullPolicy: IfNotPresent
     port: 27017
   service:
@@ -125,7 +125,7 @@ ferretdb:
     schedule: "0 0 2 * * *"  # At 02:00:00 (UTC) every day
     retention: "7d"           # keep 7 backups
     barmanObjectName: s3-store-documentdb
-    destinationPath: "documentdb-backups"
+    destinationPath: "openedx-documentdb-backups"
     host: backups.local.openedx.io
     port: 80
     useSSL: false
@@ -145,7 +145,7 @@ ferretdb:
     instances: 1
     image:
       repository: "ghcr.io/ferretdb/postgres-documentdb"
-      tag: "17-0.106.0-ferretdb-2.5.0"
+      tag: "17-0.107.0-ferretdb-2.7.0"
       pullPolicy: IfNotPresent
     superuser:
       credentials: documentdb-super-credentials

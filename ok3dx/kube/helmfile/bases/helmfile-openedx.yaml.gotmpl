@@ -1,0 +1,23 @@
+environments:
+  default:
+  dev:
+  production:
+---
+
+releases:
+- name: openedx
+  namespace: openedx
+  chart: ../../../charts/openedx
+  version: 0.1.0
+  wait: true
+  waitForJobs: true
+  needs:
+  - openedx/openedx-infra
+
+  values:
+  {{ if (eq .Environment.Name "dev") }}
+  - ./values/overrides-dev.yaml
+  {{ end }}
+  {{- if isFile "./values/overrides-local.yaml" }}
+  - ./values/overrides-local.yaml
+  {{- end }}

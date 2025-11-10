@@ -217,6 +217,10 @@ spec:
         emptyDir: {}
 
   - name: lms-migrate
+    {{- if .Values.openedx.isDev }}
+    initContainers:
+    {{- include "openedx.dev.caInitContainerForComponent" (dict "component" "lms" "root" .) | nindent 4 }}
+    {{- end }}
     container:
       image: {{ include "openedx.image" (dict "component" "lms" "root" .) }}
       imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "lms" "root" .) }}
@@ -227,15 +231,9 @@ spec:
           set -e
           cd /openedx/edx-platform
 
-          echo "Loading settings $DJANGO_SETTINGS_MODULE"
+          {{ include "openedx.dev.startupScript" . | nindent 10 }}
 
-          {{- if .Values.openedx.isDev }}
-          for dir in /mnt/*; do
-            if [ -d "$dir" ] && [ -f "$dir/setup.py" ]; then
-              pip install -e "$dir"
-            fi
-          done
-          {{- end }}
+          echo "Loading settings $DJANGO_SETTINGS_MODULE"
 
           ./manage.py lms migrate
 
@@ -279,15 +277,21 @@ spec:
       volumeMounts:
         {{- include "openedx.common.volumeMounts" . | nindent 8 }}
         {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
+        {{- include "openedx.dev.caVolumeMounts" . | nindent 8 }}
         - mountPath: /openedx/media
           name: media-storage
     volumes:
       {{- include "openedx.common.volumes" . | nindent 6 }}
       {{- include "openedx.dev.volumes" . | nindent 6 }}
+      {{- include "openedx.dev.caVolumes" . | nindent 6 }}
       - name: media-storage
         emptyDir: {}
 
   - name: cms-migrate
+    {{- if .Values.openedx.isDev }}
+    initContainers:
+    {{- include "openedx.dev.caInitContainerForComponent" (dict "component" "cms" "root" .) | nindent 4 }}
+    {{- end }}
     container:
       image: {{ include "openedx.image" (dict "component" "cms" "root" .) }}
       imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "cms" "root" .) }}
@@ -300,13 +304,7 @@ spec:
 
           echo "Loading settings $DJANGO_SETTINGS_MODULE"
 
-          {{- if .Values.openedx.isDev }}
-          for dir in /mnt/*; do
-            if [ -d "$dir" ] && [ -f "$dir/setup.py" ]; then
-              pip install -e "$dir"
-            fi
-          done
-          {{- end }}
+          {{ include "openedx.dev.startupScript" . | nindent 10 }}
 
           ./manage.py cms migrate
 
@@ -338,11 +336,13 @@ spec:
       volumeMounts:
         {{- include "openedx.common.volumeMounts" . | nindent 8 }}
         {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
+        {{- include "openedx.dev.caVolumeMounts" . | nindent 8 }}
         - mountPath: /openedx/media
           name: media-storage
     volumes:
       {{- include "openedx.common.volumes" . | nindent 6 }}
       {{- include "openedx.dev.volumes" . | nindent 6 }}
+      {{- include "openedx.dev.caVolumes" . | nindent 6 }}
       - name: media-storage
         emptyDir: {}
 

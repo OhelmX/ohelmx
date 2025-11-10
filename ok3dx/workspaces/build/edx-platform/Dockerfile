@@ -108,11 +108,7 @@ RUN --mount=type=cache,target=/openedx/.cache/pip,sharing=shared \
 # Install scorm xblock
 RUN pip install "openedx-scorm-xblock>=19.0.0,<20.0.0"
 
-
-RUN --mount=type=cache,target=/openedx/.cache/pip,sharing=shared \
-  pip install $EDX_EXTRA_PACKAGES
-
-
+RUN --mount=type=cache,target=/openedx/.cache/pip,sharing=shared if [ -n "$EDX_EXTRA_PACKAGES" ]; then pip install $EDX_EXTRA_PACKAGES; fi
 
 ###### Install nodejs with nodeenv in /openedx/nodeenv
 FROM python AS nodejs-requirements

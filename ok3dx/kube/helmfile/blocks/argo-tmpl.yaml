@@ -1,0 +1,10 @@
+argo: &argo
+  name: argo
+  namespace: argo
+  chart: oci://ghcr.io/argoproj/argo-helm/argo-workflows
+  version: 0.45.27
+  set:
+    - name: workflow.serviceAccount.create
+      value: "true"
+    - name: workflow.rbac.create
+      value: "true"
