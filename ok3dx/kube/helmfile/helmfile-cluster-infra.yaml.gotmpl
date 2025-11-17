@@ -18,7 +18,6 @@ templates:
 {{ readFile "blocks/argo-tmpl.yaml" | indent 2 }}
 {{ readFile "blocks/cert-manager-tmpl.yaml" | indent 2 }}
 {{ readFile "blocks/cnpg-tmpl.yaml" | indent 2 }}
-{{ readFile "blocks/coredns-tmpl.yaml" | indent 2 }}
 {{ readFile "blocks/traefik-tmpl.yaml" | indent 2 }}
 {{ readFile "blocks/minio-tmpl.yaml" | indent 2 }}
 
@@ -36,6 +35,3 @@ releases:
   - <<: *traefik
     values:
       - "./values/traefik-values.yaml"
-  - <<: *coredns
-    values:
-      - "./values/coredns-dev.yaml.gotmpl"
