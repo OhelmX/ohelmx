@@ -25,13 +25,12 @@ fi
 EXISTING_NETWORK=$(docker network ls | grep " ${NETWORK} ")
 if [ -z "${EXISTING_NETWORK}" ]; then
   echo "Network ${NETWORK} not found, creating"
-  docker network create --opt com.docker.network.driver.mtu=1400 ${NETWORK}
-  # docker network create --opt com.docker.network.driver.mtu=1400 --driver bridge --subnet 172.18.0.0/24 \
-  #   --gateway 172.18.0.1 ${NETWORK}
+  # docker network create --opt com.docker.network.driver.mtu=1400 ${NETWORK}
+  docker network create --opt com.docker.network.driver.mtu=1400 --driver bridge --subnet 172.18.0.0/24 --gateway 172.18.0.1 ${NETWORK}
 fi
 
 if [ -z "${K3S_IMAGE_NAME}" ]; then
-  K3S_IMAGE="--image docker.io/rancher/k3s:v1.34.1-k3s1"
+  K3S_IMAGE="--image docker.io/rancher/k3s:v1.34.2-k3s1"
 else
   K3S_IMAGE="--image ${K3S_IMAGE_NAME}"
 fi
@@ -41,6 +40,7 @@ echo "Creating cluster with image: ${K3S_IMAGE}"
 mkdir -p ~/.kube
 
 k3d cluster create ${BACKUPS_CLUSTERNAME} --config ${SCRIPT_DIR}/k3d-backups-config.yml \
+  --k3s-arg "--kube-controller-manager-arg=node-cidr-mask-size-ipv4=21@server:*" \
   ${K3S_IMAGE} --network ${NETWORK}
 k3d kubeconfig merge ${BACKUPS_CLUSTERNAME} --output ${KUBECONFIG}
 kubectl --kubeconfig ${KUBECONFIG} config set-context ${BACKUPS_CONTEXT} --namespace=${BACKUPS_NAMESPACE}

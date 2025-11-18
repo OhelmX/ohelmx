@@ -25,8 +25,8 @@ fi
 EXISTING_NETWORK=$(docker network ls | grep " ${NETWORK} " || [[ $? == 1 ]])
 if [ -z "${EXISTING_NETWORK}" ]; then
   echo "Network ${NETWORK} not found, creating"
-  docker network create --opt com.docker.network.driver.mtu=1400 ${NETWORK}
-  # docker network create --opt com.docker.network.driver.mtu=1400 --driver bridge --subnet 172.18.0.0/24 --gateway 172.18.0.1 ${NETWORK}
+  # docker network create --opt com.docker.network.driver.mtu=1400 ${NETWORK}
+  docker network create --opt com.docker.network.driver.mtu=1400 --driver bridge --subnet 172.18.0.0/24 --gateway 172.18.0.1 ${NETWORK}
 fi
 
 REGISTRY_CONFIG_FILE=${SCRIPT_DIR}/registries.yaml
@@ -38,7 +38,7 @@ else
 fi
 
 if [ -z "${K3S_IMAGE_NAME}" ]; then
-  K3S_IMAGE="--image docker.io/rancher/k3s:v1.34.1-k3s1"
+  K3S_IMAGE="--image docker.io/rancher/k3s:v1.34.2-k3s1"
 else
   K3S_IMAGE="--image ${K3S_IMAGE_NAME}"
 fi
@@ -50,6 +50,7 @@ mkdir -p ~/.kube
 k3d cluster create ${CLUSTERNAME} --config ${SCRIPT_DIR}/k3d-ok3dx-config.yml \
   ${K3S_IMAGE} ${REGISTRY_CONFIG} \
   --network ${NETWORK} \
+  --k3s-arg "--kube-controller-manager-arg=node-cidr-mask-size-ipv4=21@server:*" \
   --volume ${SCRIPT_DIR}/volumes:/opt/${APPNAME}/volumes@all \
   --volume ${SCRIPT_DIR}/../../workspaces:/workspaces@all \
   --volume ${SCRIPT_DIR}/../../workspaces/apps/edx-platform:/openedx/edx-platform@all \

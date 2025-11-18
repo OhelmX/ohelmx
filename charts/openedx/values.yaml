@@ -305,7 +305,7 @@ openedx:
 
     image:
       repository: overhangio/openedx-mfe
-      tag: "20.0.0-indigo"
+      tag: "20.1.0-indigo"
       pullPolicy: IfNotPresent
       pullSecrets: []
 
