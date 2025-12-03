@@ -2,31 +2,32 @@
 # https://hub.docker.com/_/node/tags
 FROM docker.io/node:24.11.0-bullseye-slim AS base
 
-RUN apt update \
-  && apt install -y git \
-    # required for cwebp-bin
-    gcc libgl1 libxi6 make \
-    # required for gifsicle, mozjpeg, and optipng (on arm)
-    autoconf libtool pkg-config zlib1g-dev \
-    # required for node-sass (on arm)
-    python g++ \
-    # required for image-webpack-loader (on arm)
-    libpng-dev \
-    # required for building node-canvas (on arm, for authoring)
-    # https://www.npmjs.com/package/canvas
-    libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
+RUN apt update && apt install -y git \
+  # required for cwebp-bin
+  gcc libgl1 libxi6 make \
+  # required for gifsicle, mozjpeg, and optipng (on arm)
+  autoconf libtool pkg-config zlib1g-dev \
+  # required for node-sass (on arm)
+  python g++ \
+  # required for image-webpack-loader (on arm)
+  libpng-dev \
+  # required for building node-canvas (on arm, for authoring)
+  # https://www.npmjs.com/package/canvas
+  libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
 
 RUN mkdir -p /openedx/app /openedx/env
 WORKDIR /openedx/app
 ENV PATH=/openedx/app/node_modules/.bin:${PATH}
 
+ARG MFE_BRANCH=master
 
 
 
 ####################### admin-console MFE
 ######## admin-console (git)
 FROM base AS admin-console-git
-ADD --keep-git-dir=true https://github.com/openedx/frontend-app-admin-console.git#master .
+ARG MFE_BRANCH
+ADD --keep-git-dir=true https://github.com/openedx/frontend-app-admin-console.git#${MFE_BRANCH} .
 
 ######## admin-console (src)
 # Empty layer with just the repo at the root, for build-time bind-mounts
@@ -71,7 +72,8 @@ CMD ["/bin/bash", "-c", "npm run start --- --config ./webpack.dev-tutor.config.j
 ####################### authn MFE
 ######## authn (git)
 FROM base AS authn-git
-ADD --keep-git-dir=true https://github.com/openedx/frontend-app-authn.git#master .
+ARG MFE_BRANCH
+ADD --keep-git-dir=true https://github.com/openedx/frontend-app-authn.git#${MFE_BRANCH} .
 
 ######## authn (src)
 # Empty layer with just the repo at the root, for build-time bind-mounts
@@ -116,7 +118,8 @@ CMD ["/bin/bash", "-c", "npm run start --- --config ./webpack.dev-tutor.config.j
 ####################### authoring MFE
 ######## authoring (git)
 FROM base AS authoring-git
-ADD --keep-git-dir=true https://github.com/openedx/frontend-app-authoring.git#master .
+ARG MFE_BRANCH
+ADD --keep-git-dir=true https://github.com/openedx/frontend-app-authoring.git#${MFE_BRANCH} .
 
 ######## authoring (src)
 # Empty layer with just the repo at the root, for build-time bind-mounts
@@ -161,7 +164,8 @@ CMD ["/bin/bash", "-c", "npm run start --- --config ./webpack.dev-tutor.config.j
 ####################### account MFE
 ######## account (git)
 FROM base AS account-git
-ADD --keep-git-dir=true https://github.com/openedx/frontend-app-account.git#master .
+ARG MFE_BRANCH
+ADD --keep-git-dir=true https://github.com/openedx/frontend-app-account.git#${MFE_BRANCH} .
 
 ######## account (src)
 # Empty layer with just the repo at the root, for build-time bind-mounts
@@ -206,7 +210,8 @@ CMD ["/bin/bash", "-c", "npm run start --- --config ./webpack.dev-tutor.config.j
 ####################### communications MFE
 ######## communications (git)
 FROM base AS communications-git
-ADD --keep-git-dir=true https://github.com/openedx/frontend-app-communications.git#master .
+ARG MFE_BRANCH
+ADD --keep-git-dir=true https://github.com/openedx/frontend-app-communications.git#${MFE_BRANCH} .
 
 ######## communications (src)
 # Empty layer with just the repo at the root, for build-time bind-mounts
@@ -251,7 +256,8 @@ CMD ["/bin/bash", "-c", "npm run start --- --config ./webpack.dev-tutor.config.j
 ####################### discussions MFE
 ######## discussions (git)
 FROM base AS discussions-git
-ADD --keep-git-dir=true https://github.com/openedx/frontend-app-discussions.git#master .
+ARG MFE_BRANCH
+ADD --keep-git-dir=true https://github.com/openedx/frontend-app-discussions.git#${MFE_BRANCH} .
 
 ######## discussions (src)
 # Empty layer with just the repo at the root, for build-time bind-mounts
@@ -296,7 +302,8 @@ CMD ["/bin/bash", "-c", "npm run start --- --config ./webpack.dev-tutor.config.j
 ####################### gradebook MFE
 ######## gradebook (git)
 FROM base AS gradebook-git
-ADD --keep-git-dir=true https://github.com/openedx/frontend-app-gradebook.git#master .
+ARG MFE_BRANCH
+ADD --keep-git-dir=true https://github.com/openedx/frontend-app-gradebook.git#${MFE_BRANCH} .
 
 ######## gradebook (src)
 # Empty layer with just the repo at the root, for build-time bind-mounts
@@ -341,7 +348,8 @@ CMD ["/bin/bash", "-c", "npm run start --- --config ./webpack.dev-tutor.config.j
 ####################### learner-dashboard MFE
 ######## learner-dashboard (git)
 FROM base AS learner-dashboard-git
-ADD --keep-git-dir=true https://github.com/openedx/frontend-app-learner-dashboard.git#master .
+ARG MFE_BRANCH
+ADD --keep-git-dir=true https://github.com/openedx/frontend-app-learner-dashboard.git#${MFE_BRANCH} .
 
 ######## learner-dashboard (src)
 # Empty layer with just the repo at the root, for build-time bind-mounts
@@ -386,7 +394,8 @@ CMD ["/bin/bash", "-c", "npm run start --- --config ./webpack.dev-tutor.config.j
 ####################### learning MFE
 ######## learning (git)
 FROM base AS learning-git
-ADD --keep-git-dir=true https://github.com/openedx/frontend-app-learning.git#master .
+ARG MFE_BRANCH
+ADD --keep-git-dir=true https://github.com/openedx/frontend-app-learning.git#${MFE_BRANCH} .
 
 ######## learning (src)
 # Empty layer with just the repo at the root, for build-time bind-mounts
@@ -431,7 +440,8 @@ CMD ["/bin/bash", "-c", "npm run start --- --config ./webpack.dev-tutor.config.j
 ####################### ora-grading MFE
 ######## ora-grading (git)
 FROM base AS ora-grading-git
-ADD --keep-git-dir=true https://github.com/openedx/frontend-app-ora-grading.git#master .
+ARG MFE_BRANCH
+ADD --keep-git-dir=true https://github.com/openedx/frontend-app-ora-grading.git#${MFE_BRANCH} .
 
 ######## ora-grading (src)
 # Empty layer with just the repo at the root, for build-time bind-mounts
@@ -476,7 +486,8 @@ CMD ["/bin/bash", "-c", "npm run start --- --config ./webpack.dev-tutor.config.j
 ####################### profile MFE
 ######## profile (git)
 FROM base AS profile-git
-ADD --keep-git-dir=true https://github.com/openedx/frontend-app-profile.git#master .
+ARG MFE_BRANCH
+ADD --keep-git-dir=true https://github.com/openedx/frontend-app-profile.git#${MFE_BRANCH} .
 
 ######## profile (src)
 # Empty layer with just the repo at the root, for build-time bind-mounts
@@ -626,5 +637,3 @@ COPY --from=learning-prod /openedx/app/dist /openedx/dist/learning
 COPY --from=ora-grading-prod /openedx/app/dist /openedx/dist/ora-grading
 
 COPY --from=profile-prod /openedx/app/dist /openedx/dist/profile
-
-
