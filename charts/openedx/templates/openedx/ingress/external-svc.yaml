@@ -4,7 +4,6 @@
 #      path: /mypath
 #      suppressPath: false
 #      port: 5001
-#      targetPort: 5001
 {{- $root := . -}}
 {{- $sections := list "mfe" "lms" "cms" "notes" }}
 {{- range $section := $sections }}
@@ -17,9 +16,9 @@ kind: Middleware
 metadata:
   name: stripprefix-{{ $section }}-{{ $route.name }}
 spec:
-  stripPrefixRegex:
-    regex:
-      - "^{{ $route.path }}"
+  stripPrefix:
+    prefixes:
+      - {{ $route.path }}
 {{- end }}
 ---
 apiVersion: v1

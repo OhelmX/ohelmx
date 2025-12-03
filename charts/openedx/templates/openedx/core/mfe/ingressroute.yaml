@@ -14,9 +14,7 @@ spec:
     - match: Host(`{{ .host | default $host }}`) && PathPrefix(`{{ .path }}`)
       kind: Rule
       middlewares:
-        - name: apps-body-limit
         - name: add-headers
-        - name: compress-gzip
         - name: cors-allowed-origins
 {{- if .suppressPath }}
         - name: stripprefix-mfe-{{ .name }}
