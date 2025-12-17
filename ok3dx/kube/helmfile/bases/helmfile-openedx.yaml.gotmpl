@@ -21,3 +21,8 @@ releases:
   {{- if isFile "./values/overrides-local.yaml" }}
   - ./values/overrides-local.yaml
   {{- end }}
+  {{ if (eq (env "DRY_RUN") "true") }}
+  set:
+    - name: dryRun
+      value: true
+  {{ end }}

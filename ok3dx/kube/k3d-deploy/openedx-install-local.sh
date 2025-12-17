@@ -12,6 +12,7 @@ export GATEWAY_IP=$(docker network inspect ${NETWORK} | jq -r ".[].IPAM.Config[0
 export BACKUPS_LB_IP=$(docker network inspect ${NETWORK} | jq -r ".[].Containers[] | select(.Name == \"k3d-${BACKUPS_CLUSTERNAME}-serverlb\") | .IPv4Address | split(\"/\")[0]")
 export MINIO_HOST=files.${LOCALHOST_NAME}
 export BACKUPS_HOST=backups.${LOCALHOST_NAME}
+export DRY_RUN=true
 
 echo "Using LB_IP=${LB_IP}, GATEWAY_IP=${GATEWAY_IP}, BACKUPS_LB_IP=${BACKUPS_LB_IP}, MINIO_HOST=${MINIO_HOST}, BACKUPS_HOST=${BACKUPS_HOST}"
 
