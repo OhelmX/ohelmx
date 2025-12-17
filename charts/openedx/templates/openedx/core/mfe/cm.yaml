@@ -132,6 +132,17 @@ data:
             try_files /{path} /index.html
             file_server
         }
+
+        @mfe_catalog {
+            path /catalog /catalog/*
+        }
+        handle @mfe_catalog {
+            uri strip_prefix /catalog
+            root * /openedx/dist/catalog
+            try_files /{path} /index.html
+            file_server
+        }
+
     }
     {{- if .Values.openedx.mfe.extraCaddyConfig }}
     {{ .Values.openedx.mfe.extraCaddyConfig | indent 4 }}

@@ -389,6 +389,7 @@ Shared environment variables
   value: {{ .Values.openedx.s3.addressingStyle | quote }}
 - name: S3_REGION
   value: {{ .Values.openedx.s3.region | quote }}
+
 {{- end }}
 
 {{/*
@@ -747,6 +748,11 @@ AWS_S3_CLIENT_CONFIG = Config(
     request_checksum_calculation=AWS_REQUEST_CHECKSUM_CALCULATION,
     s3={"addressing_style": AWS_S3_ADDRESSING_STYLE}
 )
+
+# Catalog microfrontend URL
+# here because https://github.com/openedx/frontend-app-catalog/blob/master/README.rst?plain=1#L58
+CATALOG_MICROFRONTEND_URL = f"https://{MFE_HOST}/catalog"
+
 ######## End of settings common to LMS and CMS
 
 {{- end -}}

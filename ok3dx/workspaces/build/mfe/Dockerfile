@@ -207,6 +207,56 @@ FROM account-common AS account-dev
 ENV NODE_ENV=development
 CMD ["/bin/bash", "-c", "npm run start --- --config ./webpack.dev-tutor.config.js"]
 
+
+####################### catalog MFE
+######## catalog (git)
+FROM base AS catalog-git
+ARG MFE_BRANCH
+# ADD --keep-git-dir=true https://github.com/openedx/frontend-app-catalog.git#${MFE_BRANCH} .
+# FIXME: Temporary workaround for repo not having a release/XXX branch yet
+ADD --keep-git-dir=true https://github.com/openedx/frontend-app-catalog.git#master .
+
+######## catalog (src)
+# Empty layer with just the repo at the root, for build-time bind-mounts
+FROM scratch AS catalog-src
+COPY --from=catalog-git /openedx/app /
+
+######## catalog (common)
+FROM base AS catalog-common
+COPY --from=catalog-src /package.json /openedx/app/package.json
+COPY --from=catalog-src /package-lock.json /openedx/app/package-lock.json
+ARG NPM_REGISTRY=https://registry.npmjs.org/
+
+
+ENV CPPFLAGS=-DPNG_ARM_NEON_OPT=0
+ENV PACT_SKIP_BINARY_INSTALL=true
+RUN --mount=type=cache,target=/root/.npm,sharing=shared npm clean-install --no-audit --no-fund --registry=$NPM_REGISTRY
+
+
+COPY --from=catalog-src / /openedx/app
+
+RUN make OPENEDX_ATLAS_PULL=true ATLAS_OPTIONS="--repository=openedx/openedx-translations --revision=main " pull_translations
+
+EXPOSE 1998
+
+# Configuration needed at build time
+ENV APP_ID=catalog
+ENV PUBLIC_PATH='/catalog/'
+# We could in theory point the mfe_config API directly to the LMS. But for that we would
+# have to code the LMS url into the mfe image, and this configuration is user-dependent.
+# So we point to a relative url that will be a proxy for the LMS.
+ENV MFE_CONFIG_API_URL=/api/mfe_config/v1
+ARG ENABLE_NEW_RELIC=false
+COPY env.config.jsx /openedx/app
+
+
+
+######## catalog (dev)
+FROM catalog-common AS catalog-dev
+ENV NODE_ENV=development
+CMD ["/bin/bash", "-c", "npm run start --- --config ./webpack.dev-tutor.config.js"]
+
+
 ####################### communications MFE
 ######## communications (git)
 FROM base AS communications-git
@@ -559,6 +609,14 @@ RUN npm run build
 
 
 
+# Production images are last to accelerate dev image building
+######## catalog (production)
+FROM catalog-common AS catalog-prod
+ENV NODE_ENV=production
+RUN npm run build
+
+
+
 ######## communications (production)
 FROM communications-common AS communications-prod
 ENV NODE_ENV=production
@@ -623,6 +681,8 @@ COPY --from=authn-prod /openedx/app/dist /openedx/dist/authn
 COPY --from=authoring-prod /openedx/app/dist /openedx/dist/authoring
 
 COPY --from=account-prod /openedx/app/dist /openedx/dist/account
+
+COPY --from=catalog-prod /openedx/app/dist /openedx/dist/catalog
 
 COPY --from=communications-prod /openedx/app/dist /openedx/dist/communications
 
