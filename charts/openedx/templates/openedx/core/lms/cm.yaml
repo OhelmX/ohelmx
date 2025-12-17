@@ -206,8 +206,9 @@ data:
 
 
 
-    MFE_CONFIG['INDIGO_ENABLE_DARK_TOGGLE'] = os.environ.get('INDIGO_ENABLE_DARK_TOGGLE', True)
-    MFE_CONFIG['INDIGO_FOOTER_NAV_LINKS'] = [{'title': 'About Us', 'url': '/about'}, {'title': 'Blog', 'url': '/blog'}, {'title': 'Donate', 'url': '/donate'}, {'title': 'Terms of Service', 'url': '/tos'}, {'title': 'Privacy Policy', 'url': '/privacy'}, {'title': 'Help', 'url': '/help'}, {'title': 'Contact Us', 'url': '/contact'}]
+    # MFE_CONFIG['INDIGO_ENABLE_DARK_TOGGLE'] = os.environ.get('INDIGO_ENABLE_DARK_TOGGLE', True)
+    # MFE_CONFIG['INDIGO_FOOTER_NAV_LINKS'] = [{'title': 'About Us', 'url': '/about'}, {'title': 'Blog', 'url': '/blog'}, {'title': 'Donate', 'url': '/donate'}, {'title': 'Terms of Service', 'url': '/tos'}, {'title': 'Privacy Policy', 'url': '/privacy'}, {'title': 'Help', 'url': '/help'}, {'title': 'Contact Us', 'url': '/contact'}]
+
     EDXNOTES_PUBLIC_API = f"https://{os.environ['NOTES_HOST']}/api/v1"
     EDXNOTES_INTERNAL_API = f"http://{os.environ['NOTES_SERVICE_HOST']}:{os.environ['NOTES_SERVICE_PORT']}/api/v1"
 

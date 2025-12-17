@@ -30,12 +30,12 @@ spec:
       - name: cms-migrate
         template: cms-migrate
         dependencies: [lms-migrate]
-      - name: theme-init
-        template: theme-init
-        dependencies: [cms-migrate]
+      # - name: theme-init
+      #   template: theme-init
+      #   dependencies: [cms-migrate]
       - name: mfe-init
         template: mfe-init
-        dependencies: [theme-init]
+        dependencies: [cms-migrate]
       - name: forum-init
         template: forum-init
         dependencies: [cms-migrate]
@@ -345,44 +345,6 @@ spec:
       {{- include "openedx.dev.caVolumes" . | nindent 6 }}
       - name: media-storage
         emptyDir: {}
-
-  - name: theme-init
-    container:
-      image: {{ include "openedx.image" (dict "component" "lms" "root" .) }}
-      imagePullPolicy: {{ include "openedx.imagePullPolicy" (dict "component" "lms" "root" .) }}
-
-      command: ["/bin/bash", "-c"]
-      args:
-        - |
-          set -e
-          cd /openedx/edx-platform
-
-          # Assign themes only if no other theme exists yet
-          ./manage.py lms shell -c "
-          import sys
-          from django.contrib.sites.models import Site
-          def assign_theme(domain):
-              site, _ = Site.objects.get_or_create(domain=domain)
-              if not site.themes.exists():
-                  site.themes.create(theme_dir_name='indigo')
-
-          assign_theme(os.environ['LMS_HOST'])
-          assign_theme(os.environ['CMS_HOST'])
-          assign_theme(os.environ['PREVIEW_HOST'])
-          "
-      env:
-        - name: SERVICE_VARIANT
-          value: lms
-        - name: DJANGO_SETTINGS_MODULE
-          value: lms.envs.tutor.production
-        {{- include "openedx.common.env" . | nindent 8 }}
-
-      volumeMounts:
-        {{- include "openedx.common.volumeMounts" . | nindent 8 }}
-        {{- include "openedx.dev.volumeMounts" . | nindent 8 }}
-    volumes:
-      {{- include "openedx.common.volumes" . | nindent 6 }}
-      {{- include "openedx.dev.volumes" . | nindent 6 }}
 
   - name: mfe-init
     container:
