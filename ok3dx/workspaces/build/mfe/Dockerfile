@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # https://hub.docker.com/_/node/tags
-FROM docker.io/node:24.11.0-bullseye-slim AS base
+FROM docker.io/node:24.12.0-bullseye-slim AS base
 
 RUN apt update && apt install -y git \
   # required for cwebp-bin
@@ -8,7 +8,7 @@ RUN apt update && apt install -y git \
   # required for gifsicle, mozjpeg, and optipng (on arm)
   autoconf libtool pkg-config zlib1g-dev \
   # required for node-sass (on arm)
-  python g++ \
+  python3 g++ \
   # required for image-webpack-loader (on arm)
   libpng-dev \
   # required for building node-canvas (on arm, for authoring)
@@ -16,12 +16,17 @@ RUN apt update && apt install -y git \
   libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
 
 RUN mkdir -p /openedx/app /openedx/env
+
+
+# Install shared dependencies in /openedx/node_modules
+WORKDIR /openedx/
+RUN npm install @rsbuild/core @rsbuild/plugin-react @rsbuild/plugin-svgr @rsbuild/plugin-sass
+
+# Install apps in /openedx/app
 WORKDIR /openedx/app
-ENV PATH=/openedx/app/node_modules/.bin:${PATH}
+ENV PATH=/openedx/app/node_modules/.bin:/openedx/node_modules/.bin:${PATH}
 
 ARG MFE_BRANCH=master
-
-
 
 ####################### admin-console MFE
 ######## admin-console (git)
@@ -584,28 +589,31 @@ CMD ["/bin/bash", "-c", "npm run start --- --config ./webpack.dev-tutor.config.j
 ######## admin-console (production)
 FROM admin-console-common AS admin-console-prod
 ENV NODE_ENV=production
-RUN npm run build
-
+COPY rsbuild.config.ts /openedx/app/rsbuild.config.ts
+RUN --mount=type=cache,target=/openedx/app/node_modules/.cache,sharing=locked rsbuild build
 
 
 ######## authn (production)
 FROM authn-common AS authn-prod
 ENV NODE_ENV=production
-RUN npm run build
+COPY rsbuild.config.ts /openedx/app/rsbuild.config.ts
+RUN --mount=type=cache,target=/openedx/app/node_modules/.cache,sharing=locked rsbuild build
 
 
 
 ######## authoring (production)
 FROM authoring-common AS authoring-prod
 ENV NODE_ENV=production
-RUN npm run build
+COPY rsbuild.config.ts /openedx/app/rsbuild.config.ts
+RUN --mount=type=cache,target=/openedx/app/node_modules/.cache,sharing=locked rsbuild build
 
 
 
 ######## account (production)
 FROM account-common AS account-prod
 ENV NODE_ENV=production
-RUN npm run build
+COPY rsbuild.config.ts /openedx/app/rsbuild.config.ts
+RUN --mount=type=cache,target=/openedx/app/node_modules/.cache,sharing=locked rsbuild build
 
 
 
@@ -613,56 +621,64 @@ RUN npm run build
 ######## catalog (production)
 FROM catalog-common AS catalog-prod
 ENV NODE_ENV=production
-RUN npm run build
+COPY rsbuild.config.ts /openedx/app/rsbuild.config.ts
+RUN --mount=type=cache,target=/openedx/app/node_modules/.cache,sharing=locked rsbuild build
 
 
 
 ######## communications (production)
 FROM communications-common AS communications-prod
 ENV NODE_ENV=production
-RUN npm run build
+COPY rsbuild.config.ts /openedx/app/rsbuild.config.ts
+RUN --mount=type=cache,target=/openedx/app/node_modules/.cache,sharing=locked rsbuild build
 
 
 
 ######## discussions (production)
 FROM discussions-common AS discussions-prod
 ENV NODE_ENV=production
-RUN npm run build
+COPY rsbuild.config.ts /openedx/app/rsbuild.config.ts
+RUN --mount=type=cache,target=/openedx/app/node_modules/.cache,sharing=locked rsbuild build
 
 
 
 ######## gradebook (production)
 FROM gradebook-common AS gradebook-prod
 ENV NODE_ENV=production
-RUN npm run build
+COPY rsbuild.config.ts /openedx/app/rsbuild.config.ts
+RUN --mount=type=cache,target=/openedx/app/node_modules/.cache,sharing=locked rsbuild build
 
 
 
 ######## learner-dashboard (production)
 FROM learner-dashboard-common AS learner-dashboard-prod
 ENV NODE_ENV=production
-RUN npm run build
+COPY rsbuild.config.ts /openedx/app/rsbuild.config.ts
+RUN --mount=type=cache,target=/openedx/app/node_modules/.cache,sharing=locked rsbuild build
 
 
 
 ######## learning (production)
 FROM learning-common AS learning-prod
 ENV NODE_ENV=production
-RUN npm run build
+COPY rsbuild.config.ts /openedx/app/rsbuild.config.ts
+RUN --mount=type=cache,target=/openedx/app/node_modules/.cache,sharing=locked rsbuild build
 
 
 
 ######## ora-grading (production)
 FROM ora-grading-common AS ora-grading-prod
 ENV NODE_ENV=production
-RUN npm run build
+COPY rsbuild.config.ts /openedx/app/rsbuild.config.ts
+RUN --mount=type=cache,target=/openedx/app/node_modules/.cache,sharing=locked rsbuild build
 
 
 
 ######## profile (production)
 FROM profile-common AS profile-prod
 ENV NODE_ENV=production
-RUN npm run build
+COPY rsbuild.config.ts /openedx/app/rsbuild.config.ts
+RUN --mount=type=cache,target=/openedx/app/node_modules/.cache,sharing=locked rsbuild build
 
 
 
