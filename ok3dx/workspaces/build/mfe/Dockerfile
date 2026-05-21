@@ -629,7 +629,16 @@ RUN --mount=type=cache,target=/openedx/app/node_modules/.cache,sharing=locked rs
 ######## communications (production)
 FROM communications-common AS communications-prod
 ENV NODE_ENV=production
+ARG DEBUG_RSBUILD_CONFIG=false
 COPY rsbuild.config.ts /openedx/app/rsbuild.config.ts
+RUN if [ "${DEBUG_RSBUILD_CONFIG}" = "true" ]; then \
+    echo "--- DEBUG: /openedx/app/rsbuild.config.ts sha256 ---"; \
+    sha256sum /openedx/app/rsbuild.config.ts; \
+    echo "--- DEBUG: marker grep (tinymceSkinCssAsSourceRule) ---"; \
+    grep -n "tinymceSkinCssAsSourceRule" /openedx/app/rsbuild.config.ts || true; \
+    echo "--- DEBUG: marker grep (defaultRules) ---"; \
+    grep -n "defaultRules" /openedx/app/rsbuild.config.ts || true; \
+  fi
 RUN --mount=type=cache,target=/openedx/app/node_modules/.cache,sharing=locked rsbuild build
 
 

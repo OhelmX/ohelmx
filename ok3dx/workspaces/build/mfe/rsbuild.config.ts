@@ -152,11 +152,27 @@ const config = defineConfig({
             //
             // We load these specific CSS files as source strings so the existing code works
             // without modifications.
-            addRules({
-                test: /\.css$/,
-                include: /[\\/]node_modules[\\/]tinymce[\\/]skins[\\/]/,
+            const tinymceSkinCssAsSourceRule = {
+                // Match both absolute resolved paths and request-like paths.
+                test: /(^|[\\/])tinymce[\\/]skins[\\/].*\.css$/,
                 type: 'asset/source',
-            });
+            };
+
+            // Prepend the rule to defaultRules so it runs before Rspack's built-in CSS handling.
+            // Otherwise the built-in CSS pipeline can consume the file first, leaving no JS exports.
+            rspackConfig.module ||= {};
+            if (Array.isArray(rspackConfig.module.defaultRules)) {
+                rspackConfig.module.defaultRules = [
+                    tinymceSkinCssAsSourceRule,
+                    ...rspackConfig.module.defaultRules,
+                ];
+            } else {
+                rspackConfig.module.defaultRules = [tinymceSkinCssAsSourceRule, '...'];
+            }
+
+            // Also prepend to normal rules as a fallback (in case Rsbuild stops using defaultRules
+            // in a future version).
+            addRules(tinymceSkinCssAsSourceRule);
 
             return rspackConfig;
         },
