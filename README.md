@@ -1,3 +1,7 @@
+# ARCHIVED
+
+openedx moves at governement speed, not a speed appropriate for 2026
+
 # OhelmX
 
 Charts and helper scripts for installing Open edX and dependencies, and setting up a `k3d`-based development environment.
